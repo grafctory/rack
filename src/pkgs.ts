@@ -28,7 +28,7 @@
 
 import { existsSync, globSync, lstatSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
-import { join, parse, relative, resolve, sep } from "node:path";
+import { dirname, join, parse, relative, resolve, sep } from "node:path";
 import { exports, type Options, type Package } from "resolve.exports";
 
 
@@ -228,6 +228,39 @@ export function projects(root: string): readonly string[] {
 		.map(member => join(root, member))
 		.filter(described)
 	] : [];
+
+}
+
+/**
+ * Locates the package a folder belongs to.
+ *
+ * @param directory The folder to locate the package of, such as a source folder inside the package
+ *
+ * @returns The nearest folder holding a manifest, from `directory` up through its ancestors; `directory` itself if none
+ * holds one, which {@link projects} then reads as a folder that is neither a package nor a workspace
+ */
+export function enclosing(directory: string): string {
+
+	return ancestors(directory).find(described) ?? directory;
+
+}
+
+/**
+ * Locates the project a folder belongs to, as npm settles it for installs.
+ *
+ * A workspace member belongs to the workspace declaring it, so its fellow members, which npm links into the workspace
+ * `node_modules`, read as packages of the project rather than as checkouts linked from outside.
+ *
+ * @param directory The folder to locate the project of, such as a workspace member or a source folder inside one
+ *
+ * @returns The nearest workspace above the {@link enclosing} package of `directory` that lists it among its
+ * {@link projects}; the enclosing package itself if no workspace declares it, as for a standalone package
+ */
+export function workspace(directory: string): string {
+
+	const owner = enclosing(directory);
+
+	return ancestors(dirname(owner)).find(candidate => projects(candidate).includes(owner)) ?? owner;
 
 }
 

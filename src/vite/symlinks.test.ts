@@ -308,6 +308,9 @@ describe("duplicate copies", () => {
 	const workspace = join(root, "workspace");
 	const checkout = join(root, "checkout");
 
+	const members = join(root, "members"); // the client loads a second copy through a fellow member
+	const apart = join(root, "apart"); // the second copy is loaded by a fellow member alone
+
 
 	function pkg(path: string, manifest: Readonly<Record<string, unknown>>) {
 		mkdirSync(path, { recursive: true });
@@ -362,6 +365,23 @@ describe("duplicate copies", () => {
 		pkg(join(workspace, "packages", "member"), { name: "member", version: "0.1.0" });
 		link(join(workspace, "packages", "member"), join(workspace, "node_modules", "member"));
 
+		pkg(members, { name: "members", workspaces: ["packages/*"] });
+		pkg(join(members, "packages", "client"), { name: "client", dependencies: { shared: "*", direct: "^2.0.0" } });
+		pkg(join(members, "packages", "shared"), { name: "shared", dependencies: { direct: "^1.0.0" } });
+		pkg(join(members, "packages", "client", "node_modules", "direct"), { name: "direct", version: "2.0.0" });
+		pkg(join(members, "node_modules", "direct"), { name: "direct", version: "1.0.0" });
+		mkdirSync(join(members, "packages", "client", "src"), { recursive: true });
+		link(join(members, "packages", "client"), join(members, "node_modules", "client"));
+		link(join(members, "packages", "shared"), join(members, "node_modules", "shared"));
+
+		pkg(apart, { name: "apart", workspaces: ["packages/*"] });
+		pkg(join(apart, "packages", "client"), { name: "client", dependencies: { direct: "^2.0.0" } });
+		pkg(join(apart, "packages", "server"), { name: "server", dependencies: { direct: "^1.0.0" } });
+		pkg(join(apart, "node_modules", "direct"), { name: "direct", version: "2.0.0" });
+		pkg(join(apart, "packages", "server", "node_modules", "direct"), { name: "direct", version: "1.0.0" });
+		link(join(apart, "packages", "client"), join(apart, "node_modules", "client"));
+		link(join(apart, "packages", "server"), join(apart, "node_modules", "server"));
+
 	});
 
 	afterAll(async () => {
@@ -383,6 +403,18 @@ describe("duplicate copies", () => {
 
 	it("should fail on duplicate copies when only workspace members are linked", async () => {
 		await expect(start(workspace)).rejects.toThrow(Error);
+	});
+
+	it("should fail on duplicate copies when the Vite root is a workspace member", async () => {
+		await expect(start(join(members, "packages", "client"))).rejects.toThrow(Error);
+	});
+
+	it("should fail on duplicate copies when the Vite root is a folder inside a workspace member", async () => {
+		await expect(start(join(members, "packages", "client", "src"))).rejects.toThrow(Error);
+	});
+
+	it("should ignore duplicate copies loaded by fellow workspace members alone", async () => {
+		await expect(start(join(apart, "packages", "client"))).resolves.toBeUndefined();
 	});
 
 	it("should ignore duplicate copies of packages outside the shared set", async () => {

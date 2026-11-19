@@ -18,7 +18,19 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, utimesSync, 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { declared, installed, loaded, locate, manifest, projects, reached, shared, survey } from "./pkgs.js";
+import {
+	declared,
+	enclosing,
+	installed,
+	loaded,
+	locate,
+	manifest,
+	projects,
+	reached,
+	shared,
+	survey,
+	workspace
+} from "./pkgs.js";
 
 
 describe("installed trees", () => {
@@ -61,6 +73,7 @@ describe("installed trees", () => {
 
 		pkg(member, { name: "member", dependencies: { "member-dep": "*" } });
 		mkdirSync(join(project, "packages", "bare"), { recursive: true }); // a member folder with no manifest
+		pkg(join(project, "tools", "standalone"), { name: "standalone" }); // nested, but no workspace member
 
 		pkg(checkout, { name: "linked", version: "0.1.0", peerDependencies: { "linked-peer": "*" } });
 		pkg(join(checkout, "node_modules", "direct"), { name: "direct", version: "3.0.0" }); // settled by the checkout
@@ -230,6 +243,54 @@ describe("installed trees", () => {
 
 		it("should list nothing for a folder with no manifest", async () => {
 			expect(projects(join(project, "packages", "bare"))).toEqual([]);
+		});
+
+	});
+
+	describe("enclosing()", () => {
+
+		it("should locate a package from its own folder", async () => {
+			expect(enclosing(member)).toBe(member);
+		});
+
+		it("should locate a package from a folder inside it", async () => {
+			expect(enclosing(join(member, "src"))).toBe(member);
+		});
+
+		it("should locate the nearest package from a member folder with no manifest", async () => {
+			expect(enclosing(join(project, "packages", "bare"))).toBe(project);
+		});
+
+		it("should fall back to the folder itself outside any package", async () => {
+			expect(enclosing(root)).toBe(root);
+		});
+
+	});
+
+	describe("workspace()", () => {
+
+		it("should locate a workspace from its root", async () => {
+			expect(workspace(project)).toBe(project);
+		});
+
+		it("should locate the workspace declaring a member", async () => {
+			expect(workspace(member)).toBe(project);
+		});
+
+		it("should locate the workspace declaring a member from a folder inside it", async () => {
+			expect(workspace(join(member, "src"))).toBe(project);
+		});
+
+		it("should locate a nested package no workspace declares as a project of its own", async () => {
+			expect(workspace(join(project, "tools", "standalone"))).toBe(join(project, "tools", "standalone"));
+		});
+
+		it("should locate a package outside any workspace as a project of its own", async () => {
+			expect(workspace(checkout)).toBe(checkout);
+		});
+
+		it("should fall back to the folder itself outside any package", async () => {
+			expect(workspace(root)).toBe(root);
 		});
 
 	});

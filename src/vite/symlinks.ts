@@ -16,7 +16,21 @@
 
 import { realpathSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve, sep } from "node:path";
-import { bare, exported, external, linked, loaded, lookup, manifest, peers, reached, shared, survey } from "../pkgs.js";
+import {
+	bare,
+	enclosing,
+	exported,
+	external,
+	linked,
+	loaded,
+	lookup,
+	manifest,
+	peers,
+	reached,
+	shared,
+	survey,
+	workspace
+} from "../pkgs.js";
 import type { Plugin } from "./plugin.js";
 
 
@@ -34,6 +48,9 @@ import type { Plugin } from "./plugin.js";
  * A package the importer resolves to an installed copy is looked up again from the Vite root, so a linked checkout
  * importing a package the project links as well loads the linked source rather than its own registry copy.
  *
+ * The project is the one the Vite root belongs to: a Vite root inside a workspace member, as for a client built from
+ * its own folder or from a source folder inside it, belongs to the workspace declaring that member.
+ *
  * The project and its linked packages load a single copy of every package the project shares with them, as libraries
  * holding module state such as Preact hooks require: linked packages and their `peerDependencies`, the dependencies of
  * the project and of its workspace members, and the `peerDependencies` of any package installed there. A linked
@@ -46,9 +63,11 @@ import type { Plugin } from "./plugin.js";
  * must load once at runtime is installed in more than one copy. A second copy splits the module state between the two
  * copies, yet tests and builds keep passing. The failure lists each duplicated package, with the version of every copy
  * and the packages pulling it in. Development tools and their own dependencies are not checked, and workspace members
- * linked by npm do not count as linked checkouts. Aligning the dependency ranges restores a single copy. A stateless
- * library that a dependency needs at a version of its own, as npm nests it, is left out of the check through `ignore`:
- * forcing a single version on it with `overrides` would run that dependency against an API it was not built for.
+ * linked by npm do not count as linked checkouts. Where the Vite root lies inside a workspace member, only the copies
+ * that member loads are checked, since copies loaded by its fellow members alone never reach its runtime. Aligning the
+ * dependency ranges restores a single copy. A stateless library that a dependency needs at a version of its own, as
+ * npm nests it, is left out of the check through `ignore`: forcing a single version on it with `overrides` would run
+ * that dependency against an API it was not built for, breaking it at runtime in ways the check would never surface.
  *
  * The dev server serves the files of linked checkouts wherever they live, including the dependencies each one installs.
  * Their real paths are added to `server.fs.allow`, next to the configured entries or, if none are configured, next to
@@ -121,11 +140,12 @@ export function symlinks({
 		config({ root }) {
 
 			const $root = resolve(root ?? "");
+			const project = workspace($root);
 
-			names = new Set(shared($root));
-			checkouts = external($root).map(path => `${path}${sep}`);
+			names = new Set(shared(project));
+			checkouts = external(project).map(path => `${path}${sep}`);
 
-			const copies = checkouts.length ? [] : duplicates($root, $ignore);
+			const copies = checkouts.length ? [] : duplicates(enclosing($root), project, $ignore);
 
 			if ( copies.length ) {
 
@@ -191,16 +211,16 @@ export function symlinks({
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
- * Describes each package a project must load once and loads in more than one copy at runtime, one line per copy, the
- * packages listed in `ignore` left out.
+ * Describes each package the package at `root` must load once and loads in more than one copy at runtime, one line per
+ * copy naming the packages of its `project` that pull it in, the packages listed in `ignore` left out.
  */
-function duplicates(root: string, ignore: ReadonlySet<string>): readonly string[] {
+function duplicates(root: string, project: string, ignore: ReadonlySet<string>): readonly string[] {
 
 	const copies = reached(root);
 	const names = new Set(loaded(root, copies));
 	const runtime = new Set(copies);
 
-	return [...survey(root)]
+	return [...survey(project)]
 		.filter(([name]) => names.has(name) && !ignore.has(name))
 		.map(([name, copies]) => ({ name, copies: [...copies].filter(([path]) => runtime.has(path)) }))
 		.filter(({ copies }) => copies.length > 1)

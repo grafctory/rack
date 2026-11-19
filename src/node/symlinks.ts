@@ -18,7 +18,7 @@ import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { createRequire, type ResolveHookSync } from "node:module";
 import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { bare, exported, external, lookup, shared } from "../pkgs.js";
+import { bare, exported, external, lookup, shared, workspace } from "../pkgs.js";
 
 
 /**
@@ -31,6 +31,10 @@ import { bare, exported, external, lookup, shared } from "../pkgs.js";
  * Packages are looked up as Node does, from the `node_modules` nearest to the importer up through its ancestors;
  * imports with no importer start from the root. A linked checkout importing a package the project links as well
  * loads the linked source rather than the registry copy it installs for itself, so the two never diverge.
+ *
+ * The project is the one the root belongs to: a root inside a workspace member, as for a member run from its own
+ * folder or from a source folder inside it, belongs to the workspace declaring that member. Fellow members are part
+ * of the project rather than linked checkouts, so their own dependencies keep the copies npm settled for them.
  *
  * The process loads a single copy of every package the project shares with its linked packages, as libraries holding
  * module state such as Preact hooks require: linked packages and their `peerDependencies`, the dependencies of the
@@ -69,7 +73,7 @@ export function symlinks({
 	conditions: string | readonly string[]
 
 	/**
-	 * The project root the linked packages and their peers resolve from; defaults to the current working directory.
+	 * A folder inside the project the linked packages and their peers resolve from; defaults to the current directory.
 	 */
 	root?: string
 
@@ -77,8 +81,10 @@ export function symlinks({
 
 	const $conditions = [conditions].flat();
 
-	const names = new Set(shared(root)); // the packages linked checkouts resolve from the root
-	const checkouts = external(root).map(path => `${path}${sep}`);
+	const project = workspace(root);
+
+	const names = new Set(shared(project)); // the packages linked checkouts resolve from the root
+	const checkouts = external(project).map(path => `${path}${sep}`);
 
 	return {
 

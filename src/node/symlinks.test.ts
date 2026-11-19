@@ -245,6 +245,44 @@ describe("symlinks()", () => {
 
 	});
 
+	describe("workspace members", () => {
+
+		const workspace = join(root, "workspace");
+		const client = join(workspace, "packages", "client");
+		const server = join(workspace, "packages", "server");
+
+		let member: ReturnType<typeof symlinks>["resolve"]; // rooted at a member, created once the links exist
+
+		beforeAll(async () => {
+
+			file(join(workspace, "package.json"), JSON.stringify({ name: "workspace", workspaces: ["packages/*"] }));
+			file(join(client, "package.json"), JSON.stringify({ name: "client", dependencies: { direct: "*" } }));
+			file(join(server, "package.json"), JSON.stringify({ name: "server", dependencies: { direct: "*" } }));
+
+			dep(join(workspace, "node_modules", "direct"), "direct");
+			dep(join(server, "node_modules", "direct"), "direct"); // a version of its own, nested by npm
+
+			symlinkSync(client, join(workspace, "node_modules", "client"), "dir");
+			symlinkSync(server, join(workspace, "node_modules", "server"), "dir");
+
+			member = symlinks({ conditions: "source", root: client }).resolve;
+
+		});
+
+		it("should leave fellow members on the copies npm settled for them", async () => {
+
+			const importer = join(server, "src/index.ts");
+
+			const result = member("direct", { conditions: ["node", "import"], importAttributes: {}, parentURL: url(importer) },
+				(specifier, context) => next(specifier, context)
+			);
+
+			expect(result.url).toBe(url(join(server, "node_modules/direct/index.js")));
+
+		});
+
+	});
+
 	describe("process", () => {
 
 		it("should run a project against the live source of its linked packages", async () => {

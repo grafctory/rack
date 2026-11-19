@@ -33,6 +33,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `@metreeca/rack/node` hooks and the `symlinks` plugin rooted inside a workspace member, as for a client run from its
+  own folder, read the project as the workspace declaring it: fellow members no longer pass for linked checkouts, so
+  their dependencies keep the copies npm settled, and the duplicate check covers only the copies that member loads
 - `ush` messages read `ush:` rather than `index:` when the script runs directly, as through a Windows command shim
 
 ## [0.7.0](https://github.com/metreeca/rack/compare/v0.6.1...v0.7.0) - 2026-11-17
