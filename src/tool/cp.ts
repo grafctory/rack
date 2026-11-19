@@ -57,8 +57,8 @@ cp.args = [
  * @param target The directory receiving the copies
  * @param patterns The glob patterns selecting the files to copy
  *
- * @throws TypeError If `target` is empty or if no pattern is provided
- * @throws Error If a pattern matches no file, in which case no file is copied for any of the patterns
+ * @throws {@link !TypeError TypeError} If `target` is empty or if no pattern is provided
+ * @throws {@link !Error Error} If a pattern matches no file, in which case no file is copied for any of the patterns
  */
 export function cp(target: string, ...patterns: readonly string[]): void {
 

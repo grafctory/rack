@@ -82,8 +82,8 @@ qc.args = [
  *
  * @returns A promise resolving once every exported subpath of every publishable package checks out
  *
- * @throws Error If `root` holds no package manifest or no publishable package, if the packages cannot be packed
- * or installed together in a scratch folder, or if any exported subpath of a publishable package is broken
+ * @throws {@link !Error Error} If `root` holds no package manifest or no publishable package, if the packages cannot
+ * be packed or installed together in a scratch folder, or if any exported subpath of a publishable package is broken
  */
 export async function qc(root: string = "."): Promise<void> {
 
@@ -271,7 +271,7 @@ function cause(error: unknown): string {
  *
  * @returns The standard output of the command
  *
- * @throws Error If the command fails, with its standard error
+ * @throws {@link !Error Error} If the command fails, with its standard error
  */
 async function run(command: string, args: readonly string[], cwd: string): Promise<string> {
 

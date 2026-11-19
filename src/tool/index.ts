@@ -113,6 +113,13 @@ function ush([path, name, ...operands]: readonly string[] = process.argv.slice(1
 
 }
 
+/**
+ * Rejects a command line naming no known tool, pointing to the help that lists the available ones.
+ *
+ * @param operand The tool name given on the command line, if any
+ *
+ * @throws {@link !TypeError TypeError} Always, naming the unknown tool or reporting that none was given
+ */
 function reject(operand?: string): void {
 	throw new TypeError(operand === undefined ? "missing command operand" : `unknown command <${operand}>`);
 }

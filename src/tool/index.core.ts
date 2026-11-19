@@ -170,7 +170,8 @@ export async function cli(
  *
  * @returns Whether help was requested, the options set in command line order with any argument, and the operands
  *
- * @throws TypeError If an option is not declared, lacks a required argument, or is given an argument it does not take
+ * @throws {@link !TypeError TypeError} If an option is not declared, lacks a required argument, or is given an
+ * argument it does not take, so that the error message also points to the `--help` option
  */
 function scan({ opts = {}, args: synopsis }: Pick<Tool, "opts" | "args">, args: readonly string[]): {
 
@@ -250,6 +251,13 @@ function status(error: unknown): number {
 }
 
 
+/**
+ * Checks whether an option synopsis declares an optional argument, as `[<page>]` does.
+ *
+ * @param arg The synopsis of the option argument
+ *
+ * @returns `true` if `arg` is enclosed in square brackets; `false` otherwise
+ */
 function optional(arg: string): boolean {
 	return arg.startsWith("[") && arg.endsWith("]");
 }

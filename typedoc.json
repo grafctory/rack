@@ -25,6 +25,12 @@
   "navigationLinks": {
     "GitHub": "https://github.com/metreeca/rack"
   },
+  "externalSymbolLinkMappings": {
+    "global": {
+      "Error": "https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Error",
+      "TypeError": "https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/TypeError"
+    }
+  },
   "excludeExternals": true,
   "excludeReferences": true,
   "githubPages": false,

@@ -57,9 +57,9 @@ up.args = [
  *
  * @returns A promise resolving once the first command to exit does so successfully and every other command is stopped
  *
- * @throws TypeError If no command is provided, or a `+` separator is not followed or preceded by a command
- * @throws Error If a command cannot be started, or the first command to exit fails or is ended by a signal; the error
- * names the command, and carries its exit status as `status` if it exited with one
+ * @throws {@link !TypeError TypeError} If no command is provided, or a `+` separator lacks a command before or after it
+ * @throws {@link !Error Error} If a command cannot be started, or the first command to exit fails or is ended by a
+ * signal; the error names the command, and carries its exit status as `status` if it exited with one
  */
 export async function up(...args: readonly string[]): Promise<void> {
 

@@ -26,7 +26,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   declares, next to linked packages and their peers, so libraries holding module state never split across copies
 - `symlinks` plugin fails Vite and Vitest startup when no checkout is linked, as after `npm ci`, and a package the
   application loads at runtime is installed in more than one copy, listing the version and dependents of each copy;
-  duplicates reached only through development tools stay silent, and `overrides` in `package.json` settles the rest
+  duplicates reached only through development tools stay silent, and stateless libraries a dependency needs at a
+  version of its own, as npm nests them, are accepted through the `ignore` option of the plugin
 - The Vite `Plugin` type returned by the plugins declares every hook as optional, so it covers both `symlinks` and
   `backend`; configurations passing it to Vite are unaffected, while code calling its hooks directly must check them
 

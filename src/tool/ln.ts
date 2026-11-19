@@ -80,7 +80,7 @@ ln.args = [
  *
  * @param deps The folders searched for local dependencies, in order of precedence; defaults to the parent folder (`..`)
  *
- * @throws Error If the current folder holds no `package.json`
+ * @throws {@link !Error Error} If the current folder holds no `package.json`
  */
 export function ln(...deps: readonly string[]): void {
 

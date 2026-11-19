@@ -21,13 +21,34 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 
+/**
+ * The path of the event stream notifying open pages that the folder changed, kept apart from the folder content.
+ */
 const Reload = "/.ush/reload";
+
+/**
+ * The script injected into served HTML pages, reloading them whenever the folder changes.
+ */
 const Script = `<script>new EventSource("${Reload}").onmessage = () => location.reload();</script>`;
+
+/**
+ * The page served for paths matching no file, live reloaded like any other page.
+ */
 const Missing = "<!doctype html><html><head><title>Not Found</title></head><body><h1>Not Found</h1></body></html>";
 
+/**
+ * The port the folder is served on unless it is taken.
+ */
 const Port = 8000;
-const Delay = 250; // ms of quiet closing a burst of changes
 
+/**
+ * The time in milliseconds without changes closing a burst of changes, before open pages are reloaded.
+ */
+const Delay = 250;
+
+/**
+ * The content types of served files, keyed by lowercase extension.
+ */
 const Types:Readonly<Record<string, string>> = {
 	".html": "text/html; charset=utf-8",
 	".css": "text/css; charset=utf-8",
@@ -138,14 +159,14 @@ ws.with = ({
  * Previewing TypeDoc output while editing sources, from an npm script:
  *
  * ```shell
- * npx typedoc --watch & ush ws --open docs
+ * ush up npx typedoc --watch + ush ws --open docs
  * ```
  *
  * @param root The folder to serve
  *
  * @returns The running server
  *
- * @throws TypeError If `root` is missing or empty
+ * @throws {@link !TypeError TypeError} If `root` is missing or empty
  */
 export function ws(root?: string): Server {
 	return ws.with({})(root);

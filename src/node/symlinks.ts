@@ -172,8 +172,8 @@ export function symlinks({
  * @returns The `customConditions` of the nearest `tsconfig.json`, read through its `extends` chain where it declares
  * none of its own; empty if no configuration is found or none declares any, so that linked packages resolve to `dist`
  *
- * @throws Error If a configuration in the chain is malformed, extends one that cannot be resolved, or extends itself
- * through the chain; the message names the offending file, so a broken link in the chain can be located at once
+ * @throws {@link !Error Error} If a configuration in the chain is malformed, extends one that cannot be resolved, or
+ * extends itself through the chain; the message names the offending file, so a broken link can be located at once
  */
 export function customConditions(directory: string): readonly string[] {
 

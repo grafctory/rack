@@ -52,7 +52,7 @@ rm.args = [
  *
  * @param patterns The glob patterns selecting the files and directories to remove
  *
- * @throws TypeError If no pattern is provided
+ * @throws {@link !TypeError TypeError} If no pattern is provided
  */
 export function rm(...patterns: readonly string[]): void {
 
