@@ -150,13 +150,18 @@ async function check(packages: readonly string[], scratch: string): Promise<read
  */
 async function pack(path: string, folder: string) {
 
-	const [{ name, filename, files }]: readonly Readonly<{
+	type Packed = Readonly<{
 		name: string
 		filename: string
 		files: readonly Readonly<{ path: string }>[]
-	}>[] = JSON.parse(await run("npm", [ // trusted output of npm
+	}>;
+
+	const output: readonly Packed[] | Readonly<Record<string, Packed>> = JSON.parse(await run("npm", [ // trusted npm output
 		"pack", "--json", "--ignore-scripts", "--pack-destination", folder
 	], path));
+
+	const packages: readonly Packed[] = Array.isArray(output) ? output : Object.values(output); // keyed by name from npm 12
+	const [{ name, filename, files }] = packages;
 
 	return { name, tarball: join(folder, filename), files: new Set(files.map(file => file.path)) };
 
