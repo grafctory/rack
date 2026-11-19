@@ -198,7 +198,7 @@ describe("cli()", () => {
 	 * Creates a tool calling a body on its operands, preceded by the options it was configured with if it declares any.
 	 */
 	function command(
-		body: (...args: unknown[]) => void = () => {},
+		body: (...args: unknown[]) => void | Promise<void> = () => {},
 		opts?: Readonly<Record<string, string>>,
 		args: readonly string[] = ["<operand>..."]
 	): Tool {
@@ -228,26 +228,26 @@ describe("cli()", () => {
 
 		it("should pass operands to the tool and succeed", async () => {
 			const body = vi.fn();
-			expect(run(["a", "b"], command(body))).toBe(0);
+			await expect(run(["a", "b"], command(body))).resolves.toBe(0);
 			expect(body).toHaveBeenCalledWith("a", "b");
 		});
 
 		it("should accept fewer operands than declared", async () => {
 			const body = vi.fn();
-			expect(run([], command(body, undefined, ["<target>", "<source>"]))).toBe(0);
+			await expect(run([], command(body, undefined, ["<target>", "<source>"]))).resolves.toBe(0);
 			expect(body).toHaveBeenCalledWith();
 		});
 
 		it("should reject operands beyond the declared ones pointing to the help", async () => {
 			const body = vi.fn();
-			expect(run(["a", "b", "c"], command(body, undefined, ["<target>", "[<source>]"]))).toBe(1);
+			await expect(run(["a", "b", "c"], command(body, undefined, ["<target>", "[<source>]"]))).resolves.toBe(1);
 			expect(printed(stderr)).toBe("tool: extra operand <c>\nTry 'tool --help' for more information.");
 			expect(body).not.toHaveBeenCalled();
 		});
 
 		it("should pass operands starting with a dash after the terminator", async () => {
 			const body = vi.fn();
-			expect(run(["a", "--", "-b"], command(body))).toBe(0);
+			await expect(run(["a", "--", "-b"], command(body))).resolves.toBe(0);
 			expect(body).toHaveBeenCalledWith("a", "-b");
 		});
 
@@ -258,7 +258,7 @@ describe("cli()", () => {
 
 			try { // process.argv is swapped for the duration of the call only
 				process.argv = ["node", "tool", "a"];
-				expect(cli(command(body), "tool")).toBe(0);
+				await expect(cli(command(body), "tool")).resolves.toBe(0);
 			} finally {
 				process.argv = argv;
 			}
@@ -276,19 +276,19 @@ describe("cli()", () => {
 
 		it("should run the tool configured with the options set on the command line", async () => {
 			const body = vi.fn();
-			expect(run(["a", "--watch", "--open=api/", "b"], command(body, opts))).toBe(0);
+			await expect(run(["a", "--watch", "--open=api/", "b"], command(body, opts))).resolves.toBe(0);
 			expect(body).toHaveBeenCalledWith({ watch: true, open: "api/" }, "a", "b");
 		});
 
 		it("should map options taking an optional argument without one to an empty string", async () => {
 			const body = vi.fn();
-			expect(run(["--open", "a"], command(body, opts))).toBe(0);
+			await expect(run(["--open", "a"], command(body, opts))).resolves.toBe(0);
 			expect(body).toHaveBeenCalledWith({ open: "" }, "a");
 		});
 
 		it("should read optional arguments only after an equals sign", async () => {
 			const body = vi.fn();
-			expect(run(["--open", "a", "b"], command(body, opts))).toBe(0);
+			await expect(run(["--open", "a", "b"], command(body, opts))).resolves.toBe(0);
 			expect(body).toHaveBeenCalledWith({ open: "" }, "a", "b");
 		});
 
@@ -297,33 +297,33 @@ describe("cli()", () => {
 			[["--port", "9000", "a"]]
 		])("should read required arguments after an equals sign or as the next argument in %j", async args => {
 			const body = vi.fn();
-			expect(run(args, command(body, opts))).toBe(0);
+			await expect(run(args, command(body, opts))).resolves.toBe(0);
 			expect(body).toHaveBeenCalledWith({ port: "9000" }, "a");
 		});
 
 		it("should reject missing required arguments pointing to the help", async () => {
 			const body = vi.fn();
-			expect(run(["a", "--port"], command(body, opts))).toBe(1);
+			await expect(run(["a", "--port"], command(body, opts))).resolves.toBe(1);
 			expect(printed(stderr)).toBe("tool: option <--port> requires an argument\nTry 'tool --help' for more information.");
 			expect(body).not.toHaveBeenCalled();
 		});
 
 		it("should configure the tool with no options if none is set", async () => {
 			const body = vi.fn();
-			expect(run(["a", "--", "-b"], command(body, opts))).toBe(0);
+			await expect(run(["a", "--", "-b"], command(body, opts))).resolves.toBe(0);
 			expect(body).toHaveBeenCalledWith({}, "a", "-b");
 		});
 
 		it("should reject arguments to options taking none pointing to the help", async () => {
 			const body = vi.fn();
-			expect(run(["--watch=yes", "a"], command(body, opts))).toBe(1);
+			await expect(run(["--watch=yes", "a"], command(body, opts))).resolves.toBe(1);
 			expect(printed(stderr)).toBe("tool: option <--watch> takes no argument\nTry 'tool --help' for more information.");
 			expect(body).not.toHaveBeenCalled();
 		});
 
 		it("should reject undeclared options pointing to the help", async () => {
 			const body = vi.fn();
-			expect(run(["--force", "a"], command(body, opts))).toBe(1);
+			await expect(run(["--force", "a"], command(body, opts))).resolves.toBe(1);
 			expect(printed(stderr)).toMatch(/^tool: unrecognized option <--force>\n/);
 			expect(body).not.toHaveBeenCalled();
 		});
@@ -341,7 +341,7 @@ describe("cli()", () => {
 
 			try { // process.argv is swapped for the duration of the call only
 				process.argv = ["node", script, "--force"];
-				expect(cli(command())).toBe(1);
+				await expect(cli(command())).resolves.toBe(1);
 			} finally {
 				process.argv = argv;
 			}
@@ -356,7 +356,7 @@ describe("cli()", () => {
 
 			try { // process.argv is swapped for the duration of the call only
 				process.argv = ["node"];
-				expect(cli(command(function probe() {}), undefined, ["--force"])).toBe(1);
+				await expect(cli(command(function probe() {}), undefined, ["--force"])).resolves.toBe(1);
 			} finally {
 				process.argv = argv;
 			}
@@ -371,18 +371,18 @@ describe("cli()", () => {
 
 		it.each(["--help", "-h"])("should print the usage for %s and skip the tool", async option => {
 			const body = vi.fn();
-			expect(run([option, "a"], command(body))).toBe(0);
+			await expect(run([option, "a"], command(body))).resolves.toBe(0);
 			expect(printed(stdout)).toBe("Usage: tool <operand>...");
 			expect(body).not.toHaveBeenCalled();
 		});
 
 		it("should compose the usage from the options and the operands", async () => {
-			expect(run(["--help"], command(() => {}, { open: "[<page>]", port: "<n>", watch: "" }))).toBe(0);
+			await expect(run(["--help"], command(() => {}, { open: "[<page>]", port: "<n>", watch: "" }))).resolves.toBe(0);
 			expect(printed(stdout)).toBe("Usage: tool [--open[=<page>]] [--port=<n>] [--watch] <operand>...");
 		});
 
 		it("should print the description below the usage line", async () => {
-			expect(cli(command(), "tool", ["--help"], "Copies things.")).toBe(0);
+			await expect(cli(command(), "tool", ["--help"], "Copies things.")).resolves.toBe(0);
 			expect(printed(stdout)).toBe("Usage: tool <operand>...\n\nCopies things.");
 		});
 
@@ -394,19 +394,64 @@ describe("cli()", () => {
 
 		it("should reject unrecognized options pointing to the help", async () => {
 			const body = vi.fn();
-			expect(run(["--force", "a"], command(body))).toBe(1);
+			await expect(run(["--force", "a"], command(body))).resolves.toBe(1);
 			expect(printed(stderr)).toBe(`tool: unrecognized option <--force>\n${hint}`);
 			expect(body).not.toHaveBeenCalled();
 		});
 
 		it("should report usage errors pointing to the help", async () => {
-			expect(run([], command(() => { throw new TypeError("missing operand"); }))).toBe(1);
+			await expect(run([], command(() => { throw new TypeError("missing operand"); }))).resolves.toBe(1);
 			expect(printed(stderr)).toBe(`tool: missing operand\n${hint}`);
 		});
 
 		it("should report other errors without pointing to the help", async () => {
-			expect(run(["a"], command(() => { throw new Error("failed operation"); }))).toBe(1);
+			await expect(run(["a"], command(() => { throw new Error("failed operation"); }))).resolves.toBe(1);
 			expect(printed(stderr)).toBe("tool: failed operation");
+		});
+
+	});
+
+	describe("asynchronous tools", () => {
+
+		const hint = "Try 'tool --help' for more information.";
+
+
+		it("should succeed once the tool resolves", async () => {
+			const body = vi.fn(() => Promise.resolve());
+			await expect(run(["a"], command(body))).resolves.toBe(0);
+			expect(body).toHaveBeenCalledWith("a");
+		});
+
+		it("should wait for the outcome of the tool", async () => {
+
+			const steps: string[] = []; // ;(mutation) records the order the tool and cli() settle in
+
+			const status = run(["a"], command(() => new Promise<void>(resolve => setTimeout(() => {
+				steps.push("tool");
+				resolve();
+			}, 10))));
+
+			await status.then(() => steps.push("cli"));
+
+			expect(steps).toEqual(["tool", "cli"]);
+
+		});
+
+		it("should report usage errors rejected by the tool pointing to the help", async () => {
+			await expect(run([], command(() => Promise.reject(new TypeError("missing operand"))))).resolves.toBe(1);
+			expect(printed(stderr)).toBe(`tool: missing operand\n${hint}`);
+		});
+
+		it("should report other errors rejected by the tool without pointing to the help", async () => {
+			await expect(run(["a"], command(() => Promise.reject(new Error("failed operation"))))).resolves.toBe(1);
+			expect(printed(stderr)).toBe("tool: failed operation");
+		});
+
+		it("should report rejections of tools configured with options", async () => {
+			await expect(run(["--watch", "a"], command(() => Promise.reject(new TypeError("missing operand")), {
+				watch: ""
+			}))).resolves.toBe(1);
+			expect(printed(stderr)).toBe(`tool: missing operand\n${hint}`);
 		});
 
 	});

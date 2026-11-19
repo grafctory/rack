@@ -22,6 +22,7 @@ import { parseArgs, type ParseArgsOptionDescriptor } from "node:util";
  * A command line tool, declaring the options and operands it accepts.
  *
  * The tool throws a `TypeError` on a command line it cannot act on, so that the error message also points to the help.
+ * A tool that finishes later returns a promise instead, rejected with the error it would otherwise throw.
  */
 export interface Tool {
 
@@ -29,8 +30,10 @@ export interface Tool {
 	 * Runs the tool with no option set.
 	 *
 	 * @param args The operands, with `undefined` in place of a missing one
+	 *
+	 * @returns Nothing if the tool is done on return; otherwise a promise settling once the tool finishes
 	 */
-	(...args: string[]): void
+	(...args: string[]): void | Promise<void>
 
 	/**
 	 * The long options accepted, each mapped to the synopsis of its argument: `<n>` for a required argument, as in
@@ -58,7 +61,7 @@ export interface Tool {
 	 *
 	 * @returns The tool configured with the options, to be run on the operands
 	 */
-	with?(opts: Readonly<Record<string, string | true>>): (...args: string[]) => void
+	with?(opts: Readonly<Record<string, string | true>>): (...args: string[]) => void | Promise<void>
 
 }
 
@@ -90,19 +93,23 @@ export function usage({ opts = {}, args }: Tool): string {
  * skip the tool. Errors go to stderr prefixed with the command name. Usage errors also point to `--help`: unrecognized
  * options, missing required arguments, arguments given to options taking none, and operands beyond the declared ones.
  *
+ * A tool that finishes later is awaited before the exit status is settled. Its rejection is reported as a thrown
+ * error would be, so a rejected `TypeError` also points to `--help`, like any other usage error.
+ *
  * @param tool The tool to run
  * @param name The command prefixing messages, as in `ush cp`; defaults to the bare script name, else the `tool` name
  * @param args The command line arguments after the command name; defaults to those the process was launched with
  * @param description The text printed by `--help` below the usage line, such as a list of subcommands
  *
- * @returns The process exit status: `0` on success, `1` on failure
+ * @returns A promise resolving to the process exit status once the tool finishes: `0` on success, `1` on failure;
+ * never rejected, since every failure is reported on stderr, so callers have no rejection to handle
  */
-export function cli(
+export async function cli(
 	tool: Tool,
 	name: string = process.argv[1] !== undefined ? parse(process.argv[1]).name : tool.name,
 	args: readonly string[] = process.argv.slice(2),
 	description?: string
-): number {
+): Promise<number> {
 
 	try {
 
@@ -130,7 +137,7 @@ export function cli(
 				[name, value ?? (opts[name] ? "" : true)] // a bare option maps to "" if its argument is optional
 			))) ?? tool;
 
-			configured(...operands);
+			await configured(...operands);
 
 		}
 
@@ -138,14 +145,9 @@ export function cli(
 
 	} catch ( error ) {
 
-		return fail(error instanceof Error ? error.message : String(error), error instanceof TypeError);
+		const message = error instanceof Error ? error.message : String(error);
 
-	}
-
-
-	function fail(message: string, usage: boolean): number {
-
-		console.error(usage
+		console.error(error instanceof TypeError
 			? `${name}: ${message}\nTry '${name} --help' for more information.`
 			: `${name}: ${message}`
 		);

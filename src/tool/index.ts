@@ -56,11 +56,18 @@ const commands = [
 	ws
 ];
 
+reject.args = [
+
+	"<command>",
+	"[<operand>]..."
+
+];
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 if ( import.meta.main ) {
-	process.exitCode = ush();
+	process.exitCode = await ush();
 }
 
 
@@ -75,19 +82,12 @@ if ( import.meta.main ) {
  *
  * @param args The script path, followed by the tool name and its arguments; defaults to the process command line
  *
- * @returns The process exit status: `0` on success, `1` on failure
+ * @returns A promise resolving to the exit status once the tool finishes: `0` on success, `1` on failure
  */
-function ush([path, name, ...operands]: readonly string[] = process.argv.slice(1)): number {
+function ush([path, name, ...operands]: readonly string[] = process.argv.slice(1)): Promise<number> {
 
 	const program = parse(path).name;
 	const command = commands.find(tool => tool.name === name);
-
-	reject.args = [
-
-		"<command>",
-		"[<operand>]..."
-
-	];
 
 	return command
 		? cli(command, `${program} ${name}`, operands)
@@ -98,8 +98,8 @@ function ush([path, name, ...operands]: readonly string[] = process.argv.slice(1
 		return ["Commands:", ...commands.map(tool => `  ${tool.name} ${usage(tool)}`)].join("\n");
 	}
 
-	function reject(operand?: string): void {
-		throw new TypeError(operand === undefined ? "missing command operand" : `unknown command <${operand}>`);
-	}
+}
 
+function reject(operand?: string): void {
+	throw new TypeError(operand === undefined ? "missing command operand" : `unknown command <${operand}>`);
 }
