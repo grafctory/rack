@@ -106,9 +106,7 @@ ws.with = ({
 
 			console.log(`ws ${url}`);
 
-			if ( page !== undefined ) {
-				open(new URL(page, url).href);
-			}
+			return page === undefined ? undefined : open(new URL(page, url).href);
 
 		});
 

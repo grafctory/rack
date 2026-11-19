@@ -424,7 +424,7 @@ describe("cli()", () => {
 
 		it("should wait for the outcome of the tool", async () => {
 
-			const steps: string[] = []; // ;(mutation) records the order the tool and cli() settle in
+			const steps: string[] = [];
 
 			const status = run(["a"], command(() => new Promise<void>(resolve => setTimeout(() => {
 				steps.push("tool");

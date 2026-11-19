@@ -213,7 +213,7 @@ function scan({ opts = {} }: Pick<Tool, "opts">, args: readonly string[]): {
 
 		return {
 			help: values.help === true,
-			options: options.filter(({ name }) => name !== "help").map(({ name, value }) => ({ name, value })),
+			options: options.filter(({ name }) => name !== "help"),
 			operands: positionals
 		};
 

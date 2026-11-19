@@ -27,7 +27,7 @@ describe("backend()", () => {
 
 	const root = realpathSync(mkdtempSync(join(tmpdir(), "rack-backend-")));
 
-	const listeners: Server[] = []; // ;(mutation) collected for teardown, closed after each test
+	const listeners: Server[] = [];
 
 
 	function listen(port = 0, host = "127.0.0.1"): Promise<number> {

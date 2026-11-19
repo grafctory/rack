@@ -75,7 +75,7 @@ export function symlinks({
 
 }): Readonly<{ resolve: ResolveHookSync }> {
 
-	const $conditions = typeof conditions === "string" ? [conditions] : conditions;
+	const $conditions = [conditions].flat();
 
 	const names = new Set(shared(root)); // the packages linked checkouts resolve from the root
 	const checkouts = external(root).map(path => `${path}${sep}`);

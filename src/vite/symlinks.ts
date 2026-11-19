@@ -107,7 +107,7 @@ export function symlinks({
 
 }): Plugin {
 
-	const $conditions = typeof conditions === "string" ? [conditions] : conditions;
+	const $conditions = [conditions].flat();
 	const $ignore = new Set(ignore);
 
 	let names: ReadonlySet<string> = new Set(); // assigned by the config hook, once the project root is known

@@ -120,15 +120,13 @@ export function ln(...deps: readonly string[]): void {
 
 		console.log(`ln ${relative(home, target)}`);
 
-		commands(path, name).forEach(([command, script]) => {
+		const bins = commands(path, name);
 
-			replace(join(modules, ".bin", command), join(target, script));
+		bins.forEach(([command, script]) => replace(join(modules, ".bin", command), join(target, script)));
 
-			if ( existsSync(join(path, script)) ) {
-				chmodSync(join(path, script), 0o755); // as npm does on install, since tsc emits no mode
-			}
-
-		});
+		bins.map(([, script]) => join(path, script))
+			.filter(script => existsSync(script))
+			.forEach(script => chmodSync(script, 0o755)); // as npm does on install, since tsc emits no mode
 
 	}
 
