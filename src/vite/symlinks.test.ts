@@ -295,3 +295,110 @@ describe("symlinks()", () => {
 	});
 
 });
+
+describe("duplicate copies", () => {
+
+	const root = realpathSync(mkdtempSync(join(tmpdir(), "rack-duplicates-")));
+
+	const skewed = join(root, "skewed");
+	const transitive = join(root, "transitive");
+	const tooling = join(root, "tooling");
+	const dev = join(root, "dev");
+	const linked = join(root, "linked");
+	const workspace = join(root, "workspace");
+	const checkout = join(root, "checkout");
+
+
+	function pkg(path: string, manifest: Readonly<Record<string, unknown>>) {
+		mkdirSync(path, { recursive: true });
+		writeFileSync(join(path, "package.json"), JSON.stringify(manifest));
+	}
+
+	function link(target: string, path: string) {
+		mkdirSync(dirname(path), { recursive: true });
+		symlinkSync(target, path, "dir");
+	}
+
+	const runtime = { dependencies: { direct: "^2.0.0", lib: "*" } };
+
+
+	function skew(project: string, manifest: Readonly<Record<string, unknown>> = runtime) { // a second copy of direct
+		pkg(project, { name: "project", ...manifest });
+		pkg(join(project, "node_modules", "direct"), { name: "direct", version: "2.0.0" });
+		pkg(join(project, "node_modules", "lib"), { name: "lib", version: "1.0.0", dependencies: { direct: "^1.0.0" } });
+		pkg(join(project, "node_modules", "lib", "node_modules", "direct"), { name: "direct", version: "1.0.0" });
+	}
+
+	function start(project: string, ignore?: readonly string[]) {
+		return createServer({
+			root: project,
+			configFile: false,
+			logLevel: "silent",
+			server: { middlewareMode: true, hmr: false, ws: false },
+			plugins: [symlinks({ conditions: "source", ignore })]
+		}).then(server => server.close());
+	}
+
+
+	beforeAll(async () => {
+
+		skew(skewed);
+
+		pkg(transitive, { name: "project", dependencies: { lib: "*", tool: "*" } });
+		pkg(join(transitive, "node_modules", "lib"), { name: "lib", version: "1.0.0", dependencies: { helper: "^1" } });
+		pkg(join(transitive, "node_modules", "helper"), { name: "helper", version: "1.0.0" });
+		pkg(join(transitive, "node_modules", "tool"), { name: "tool", version: "1.0.0", dependencies: { helper: "^2" } });
+		pkg(join(transitive, "node_modules", "tool", "node_modules", "helper"), { name: "helper", version: "2.0.0" });
+
+		skew(tooling, { devDependencies: runtime.dependencies });
+
+		skew(dev, { dependencies: { direct: "^2.0.0" }, devDependencies: { lib: "*" } }); // direct loaded, lib not
+
+		skew(linked);
+		pkg(checkout, { name: "checkout", version: "0.1.0" });
+		link(checkout, join(linked, "node_modules", "checkout"));
+
+		skew(workspace, { ...runtime, workspaces: ["packages/*"] });
+		pkg(join(workspace, "packages", "member"), { name: "member", version: "0.1.0" });
+		link(join(workspace, "packages", "member"), join(workspace, "node_modules", "member"));
+
+	});
+
+	afterAll(async () => {
+		rmSync(root, { recursive: true, force: true });
+	});
+
+
+	it("should fail on duplicate copies of a package loaded once", async () => {
+		await expect(start(skewed)).rejects.toThrow(Error);
+	});
+
+	it("should point duplicate copies to the ranges and to the ignore option", async () => {
+		await expect(start(skewed)).rejects.toThrow(/align the dependency ranges.*ignore/s);
+	});
+
+	it("should ignore duplicate copies of the packages listed as ignored", async () => {
+		await expect(start(skewed, ["direct"])).resolves.toBeUndefined();
+	});
+
+	it("should fail on duplicate copies when only workspace members are linked", async () => {
+		await expect(start(workspace)).rejects.toThrow(Error);
+	});
+
+	it("should ignore duplicate copies of packages outside the shared set", async () => {
+		await expect(start(transitive)).resolves.toBeUndefined();
+	});
+
+	it("should ignore duplicate copies of development dependencies", async () => {
+		await expect(start(tooling)).resolves.toBeUndefined();
+	});
+
+	it("should ignore second copies reached only through development dependencies", async () => {
+		await expect(start(dev)).resolves.toBeUndefined();
+	});
+
+	it("should deduplicate rather than fail when checkouts are linked", async () => {
+		await expect(start(linked)).resolves.toBeUndefined();
+	});
+
+});

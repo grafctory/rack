@@ -18,8 +18,7 @@ import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { createRequire, type ResolveHookSync } from "node:module";
 import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { exports } from "resolve.exports";
-import { bare, external, lookup, manifest, shared } from "../symlinks.js";
+import { bare, exported, external, lookup, shared } from "../pkgs.js";
 
 
 /**
@@ -93,12 +92,14 @@ export function symlinks({
 
 			if ( link !== undefined ) {
 
-				const path = realpathSync(link);
-				const target = source(path, specifier, context.conditions);
+				const target = exported(realpathSync(link), specifier, {
+					conditions: $conditions,
+					require: context.conditions.includes("require")
+				});
 
 				return target === undefined
 					? next(specifier, context) // subpath not exported or excluded by a null target: node reports it
-					: { url: pathToFileURL(resolve(path, target)).href, shortCircuit: true };
+					: { url: pathToFileURL(target).href, shortCircuit: true };
 
 			} else if ( name !== undefined && names.has(name) && checkouts.some(path => parent?.startsWith(path)) ) {
 
@@ -118,21 +119,6 @@ export function symlinks({
 
 	};
 
-
-	function source(path: string, specifier: string, conditions: readonly string[]): string | undefined {
-		try {
-
-			return exports(manifest(path), specifier, {
-				conditions: $conditions,
-				require: conditions.includes("require")
-			})?.[0];
-
-		} catch { // subpath not exported or excluded by a null target
-
-			return undefined;
-
-		}
-	}
 
 	function rooted(
 		specifier: string,

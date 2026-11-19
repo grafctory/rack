@@ -16,7 +16,7 @@
 
 import { chmodSync, existsSync, mkdirSync, realpathSync, rmSync, symlinkSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
-import { children, declared, described, installed, manifest, projects } from "../symlinks.js";
+import { children, declared, described, installed, manifest, projects } from "../pkgs.js";
 
 
 /**

@@ -18,7 +18,7 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, utimesSync, 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { declared, installed, locate, manifest, projects, shared, survey } from "./symlinks.js";
+import { declared, installed, loaded, locate, manifest, projects, reached, shared, survey } from "./pkgs.js";
 
 
 describe("installed trees", () => {
@@ -47,8 +47,16 @@ describe("installed trees", () => {
 		pkg(project, {
 			name: "project",
 			workspaces: ["packages/*"],
-			dependencies: { direct: "^2.0.0", linked: "*" },
+			dependencies: { direct: "^2.0.0", linked: "*", app: "*" },
 			devDependencies: { tool: "*" }
+		});
+
+		pkg(join(modules, "app"), { name: "app", version: "1.0.0", dependencies: { framework: "*" } });
+		pkg(join(modules, "framework"), {
+			name: "framework",
+			version: "1.0.0",
+			peerDependencies: { context: "*", devtools: "*" },
+			peerDependenciesMeta: { devtools: { optional: true } }
 		});
 
 		pkg(member, { name: "member", dependencies: { "member-dep": "*" } });
@@ -85,6 +93,134 @@ describe("installed trees", () => {
 		rmSync(root, { recursive: true, force: true });
 	});
 
+
+	describe("shared()", () => {
+
+		it("should include linked packages and their peers", async () => {
+			expect(shared(project)).toEqual(expect.arrayContaining(["linked", "linked-peer"]));
+		});
+
+		it("should include the dependencies of the project and of its workspace members", async () => {
+			expect(shared(project)).toEqual(expect.arrayContaining(["direct", "tool", "member-dep"]));
+		});
+
+		it("should include the peers of installed packages", async () => {
+			expect(shared(project)).toContain("peer");
+		});
+
+		it("should leave other dependencies out", async () => {
+			expect(shared(project)).not.toContain("helper");
+		});
+
+		it("should list each package once", async () => {
+			expect(new Set(shared(project)).size).toBe(shared(project).length);
+		});
+
+	});
+
+	describe("loaded()", () => {
+
+		it("should include linked packages and their peers", async () => {
+			expect(loaded(project)).toEqual(expect.arrayContaining(["linked", "linked-peer"]));
+		});
+
+		it("should include the runtime dependencies of the project and of its workspace members", async () => {
+			expect(loaded(project)).toEqual(expect.arrayContaining(["direct", "app", "member-dep"]));
+		});
+
+		it("should include the peers of packages reached through runtime dependencies", async () => {
+			expect(loaded(project)).toContain("context");
+		});
+
+		it("should leave development dependencies out", async () => {
+			expect(loaded(project)).not.toContain("tool");
+		});
+
+		it("should leave out the peers of packages no runtime dependency reaches", async () => {
+			expect(loaded(project)).not.toContain("peer");
+		});
+
+		it("should leave optional peers out", async () => {
+			expect(loaded(project)).not.toContain("devtools");
+		});
+
+		it("should leave other dependencies out", async () => {
+			expect(loaded(project)).not.toContain("helper");
+		});
+
+		it("should list each package once", async () => {
+			expect(new Set(loaded(project)).size).toBe(loaded(project).length);
+		});
+
+	});
+
+	describe("reached()", () => {
+
+		it("should include the copies the runtime dependencies of the project and of its members point to", async () => {
+			expect(reached(project)).toEqual(expect.arrayContaining([
+				join(modules, "direct"), join(modules, "app"), join(member, "node_modules", "member-dep")
+			]));
+		});
+
+		it("should include the copies reached through dependencies of reached copies", async () => {
+			expect(reached(project)).toContain(join(modules, "framework"));
+		});
+
+		it("should include linked checkouts reached through runtime dependencies", async () => {
+			expect(reached(project)).toContain(checkout);
+		});
+
+		it("should leave out the copies reached only through development dependencies", async () => {
+			expect(reached(project)).not.toContain(join(modules, "tool"));
+		});
+
+		it("should leave out the copies no runtime dependency reaches", async () => {
+			expect(reached(project)).not.toContain(join(modules, "lib", "node_modules", "direct"));
+		});
+
+		it("should list each copy once", async () => {
+			expect(new Set(reached(project)).size).toBe(reached(project).length);
+		});
+
+	});
+
+	describe("survey()", () => {
+
+		it("should list each copy of a direct dependency with its dependents", async () => {
+			expect(survey(project).get("direct")).toEqual(new Map([
+				[join(modules, "direct"), ["project"]],
+				[join(modules, "lib", "node_modules", "direct"), ["lib"]]
+			]));
+		});
+
+		it("should list each copy of a peer with its dependents", async () => {
+			expect(survey(project).get("peer")).toEqual(new Map([
+				[join(modules, "peer"), ["host"]],
+				[join(modules, "widget", "node_modules", "peer"), ["widget"]]
+			]));
+		});
+
+		it("should count links to the same checkout as a single copy", async () => {
+			expect(survey(project).get("linked")).toEqual(new Map([
+				[checkout, ["project"]]
+			]));
+		});
+
+		it("should list a single copy of packages installed once", async () => {
+			expect(survey(project).get("tool")).toEqual(new Map([
+				[join(modules, "tool"), ["project"]]
+			]));
+		});
+
+		it("should leave out packages outside the shared set", async () => {
+			expect(survey(project).has("helper")).toBe(false);
+		});
+
+		it("should leave out packages the project does not install", async () => {
+			expect(survey(project).has("linked-peer")).toBe(false);
+		});
+
+	});
 
 	describe("projects()", () => {
 
@@ -174,68 +310,6 @@ describe("installed trees", () => {
 
 		it("should locate nothing for packages not installed", async () => {
 			expect(locate("missing", project)).toBeUndefined();
-		});
-
-	});
-
-	describe("shared()", () => {
-
-		it("should include linked packages and their peers", async () => {
-			expect(shared(project)).toEqual(expect.arrayContaining(["linked", "linked-peer"]));
-		});
-
-		it("should include the dependencies of the project and of its workspace members", async () => {
-			expect(shared(project)).toEqual(expect.arrayContaining(["direct", "tool", "member-dep"]));
-		});
-
-		it("should include the peers of installed packages", async () => {
-			expect(shared(project)).toContain("peer");
-		});
-
-		it("should leave other dependencies out", async () => {
-			expect(shared(project)).not.toContain("helper");
-		});
-
-		it("should list each package once", async () => {
-			expect(new Set(shared(project)).size).toBe(shared(project).length);
-		});
-
-	});
-
-	describe("survey()", () => {
-
-		it("should list each copy of a direct dependency with its dependents", async () => {
-			expect(survey(project).get("direct")).toEqual(new Map([
-				[join(modules, "direct"), ["project"]],
-				[join(modules, "lib", "node_modules", "direct"), ["lib"]]
-			]));
-		});
-
-		it("should list each copy of a peer with its dependents", async () => {
-			expect(survey(project).get("peer")).toEqual(new Map([
-				[join(modules, "peer"), ["host"]],
-				[join(modules, "widget", "node_modules", "peer"), ["widget"]]
-			]));
-		});
-
-		it("should count links to the same checkout as a single copy", async () => {
-			expect(survey(project).get("linked")).toEqual(new Map([
-				[checkout, ["project"]]
-			]));
-		});
-
-		it("should list a single copy of packages installed once", async () => {
-			expect(survey(project).get("tool")).toEqual(new Map([
-				[join(modules, "tool"), ["project"]]
-			]));
-		});
-
-		it("should leave out packages outside the shared set", async () => {
-			expect(survey(project).has("helper")).toBe(false);
-		});
-
-		it("should leave out packages the project does not install", async () => {
-			expect(survey(project).has("linked-peer")).toBe(false);
 		});
 
 	});

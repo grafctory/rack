@@ -16,8 +16,7 @@
 
 import { realpathSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve, sep } from "node:path";
-import { exports } from "resolve.exports";
-import { bare, external, linked, lookup, manifest, shared } from "../symlinks.js";
+import { bare, exported, external, linked, loaded, lookup, manifest, reached, shared, survey } from "../pkgs.js";
 
 
 /**
@@ -73,6 +72,14 @@ export type Plugin = Readonly<{
  * optimizer share them too. Any other dependency of a linked package resolves from its checkout, as Node does, since
  * the project shares no copy of it, and packages installed from the registry keep the copies npm settled for them.
  *
+ * Where no checkout is linked, as after a clean install, Vite and Vitest fail to start if a package the application
+ * must load once at runtime is installed in more than one copy. A second copy splits the module state between the two
+ * copies, yet tests and builds keep passing. The failure lists each duplicated package, with the version of every copy
+ * and the packages pulling it in. Development tools and their own dependencies are not checked, and workspace members
+ * linked by npm do not count as linked checkouts. Aligning the dependency ranges restores a single copy. A stateless
+ * library that a dependency needs at a version of its own, as npm nests it, is left out of the check through `ignore`:
+ * forcing a single version on it with `overrides` would run that dependency against an API it was not built for.
+ *
  * The dev server serves the files of linked checkouts wherever they live, including the dependencies each one installs.
  * Their real paths are added to `server.fs.allow`, next to the configured entries or, if none are configured, next to
  * the workspace root Vite allows by default. Checkouts linked after the server starts are served once it restarts.
@@ -105,12 +112,14 @@ export type Plugin = Readonly<{
  *
  * @param options The resolution settings
  *
- * @returns A plugin resolving linked imports to source, deduplicating linked packages and their peers, letting the dev
- * server serve linked checkouts, and leaving all other imports to the default resolution
+ * @returns A plugin resolving linked imports to source, loading a single copy of each package the project shares with
+ * its linked packages, rejecting duplicate copies of those packages where no checkout is linked, letting the dev server
+ * serve linked checkouts, and leaving any other import to the default resolution
  */
 export function symlinks({
 
-	conditions
+	conditions,
+	ignore = []
 
 }: {
 
@@ -120,9 +129,16 @@ export function symlinks({
 	 */
 	conditions: string | readonly string[]
 
+	/**
+	 * The names of the packages whose duplicate copies are accepted, as for stateless libraries holding no module state
+	 * the copies would split; defaults to none.
+	 */
+	ignore?: readonly string[]
+
 }): Plugin {
 
 	const $conditions = typeof conditions === "string" ? [conditions] : conditions;
+	const $ignore = new Set(ignore);
 
 	let names: ReadonlySet<string> = new Set(); // assigned by the config hook, once the project root is known
 	let checkouts: readonly string[] = [];
@@ -139,13 +155,27 @@ export function symlinks({
 			names = new Set(shared($root));
 			checkouts = external($root).map(path => `${path}${sep}`);
 
-			return {
-				resolve: {
-					dedupe: linked($root).flatMap(path => [
-						manifest(path).name, ...Object.keys(manifest(path).peerDependencies ?? {})
-					])
-				}
-			};
+			const copies = checkouts.length ? [] : duplicates($root, $ignore);
+
+			if ( copies.length ) {
+
+				throw new Error([
+					"duplicate copies of packages loaded once",
+					...copies,
+					"align the dependency ranges, or list stateless packages under the ignore option of symlinks()"
+				].join("\n"));
+
+			} else {
+
+				return {
+					resolve: {
+						dedupe: linked($root).flatMap(path => [
+							manifest(path).name, ...Object.keys(manifest(path).peerDependencies ?? {})
+						])
+					}
+				};
+
+			}
 
 		},
 
@@ -164,12 +194,9 @@ export function symlinks({
 
 				try {
 
-					const path = realpathSync(link);
-					const target = exports(manifest(path), id, { conditions: $conditions })?.[0];
+					return exported(realpathSync(link), id, { conditions: $conditions }) ?? null;
 
-					return target === undefined ? null : resolve(path, target);
-
-				} catch { // subpath not exported or excluded by a null target
+				} catch { // dangling link
 
 					return null;
 
@@ -189,5 +216,28 @@ export function symlinks({
 		}
 
 	};
+
+}
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Describes each package a project must load once and loads in more than one copy at runtime, one line per copy, the
+ * packages listed in `ignore` left out.
+ */
+function duplicates(root: string, ignore: ReadonlySet<string>): readonly string[] {
+
+	const copies = reached(root);
+	const names = new Set(loaded(root, copies));
+	const runtime = new Set(copies);
+
+	return [...survey(root)]
+		.filter(([name]) => names.has(name) && !ignore.has(name))
+		.map(([name, copies]) => ({ name, copies: [...copies].filter(([path]) => runtime.has(path)) }))
+		.filter(({ copies }) => copies.length > 1)
+		.flatMap(({ name, copies }) => [name, ...copies.map(([path, dependents]) =>
+			`  ${manifest(path).version ?? "unversioned"} ${path} <- ${dependents.join(", ")}`
+		)]);
 
 }

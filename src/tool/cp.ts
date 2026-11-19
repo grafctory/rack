@@ -81,15 +81,15 @@ export function cp(target: string, ...patterns: readonly string[]): void {
 
 		const sources = globSync(pattern).filter(source => statSync(source).isFile());
 
-		if ( !sources.length ) {
-			throw new Error(`unmatched pattern <${pattern}>`);
-		}
-
 		const segments = pattern.split("/");
 		const wild = segments.findIndex(segment => /[*?[\]{}]/.test(segment));
 		const base = wild < 0 ? dirname(pattern) : segments.slice(0, wild).join("/") || ".";
 
-		return sources.map(source => ({ source, destination: join(target, relative(base, source)) }));
+		if ( sources.length ) {
+			return sources.map(source => ({ source, destination: join(target, relative(base, source)) }));
+		} else {
+			throw new Error(`unmatched pattern <${pattern}>`);
+		}
 
 	}
 
