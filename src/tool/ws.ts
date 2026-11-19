@@ -21,14 +21,14 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 
-const reload = "/.ush/reload";
-const script = `<script>new EventSource("${reload}").onmessage = () => location.reload();</script>`;
-const missing = "<!doctype html><html><head><title>Not Found</title></head><body><h1>Not Found</h1></body></html>";
+const Reload = "/.ush/reload";
+const Script = `<script>new EventSource("${Reload}").onmessage = () => location.reload();</script>`;
+const Missing = "<!doctype html><html><head><title>Not Found</title></head><body><h1>Not Found</h1></body></html>";
 
-const port = 8000;
-const delay = 250; // ms of quiet closing a burst of changes
+const Port = 8000;
+const Delay = 250; // ms of quiet closing a burst of changes
 
-const types: Readonly<Record<string, string>> = {
+const Types:Readonly<Record<string, string>> = {
 	".html": "text/html; charset=utf-8",
 	".css": "text/css; charset=utf-8",
 	".js": "text/javascript; charset=utf-8",
@@ -185,7 +185,7 @@ function serve(root: string): Server {
 
 		.on("close", unwatch)
 
-		.listen(port, "localhost");
+		.listen(Port, "localhost");
 
 
 	function handle(request: IncomingMessage, response: ServerResponse): void {
@@ -195,7 +195,7 @@ function serve(root: string): Server {
 		const path = locate(pathname);
 		const folder = path !== undefined && inspect(path)?.isDirectory() === true;
 
-		if ( pathname === reload ) {
+		if ( pathname === Reload ) {
 
 			stream(response);
 
@@ -206,10 +206,10 @@ function serve(root: string): Server {
 		} else {
 
 			const { status, type, body } = load(folder ? join(path, "index.html") : path)
-			?? { status: 404, type: types[".html"], body: Buffer.from(missing) };
+			?? { status: 404, type: Types[".html"], body: Buffer.from(Missing) };
 
 			response.writeHead(status, { "content-type": type, "cache-control": "no-store" })
-				.end(type === types[".html"] ? inject(body.toString()) : body);
+				.end(type === Types[".html"] ? inject(body.toString()) : body);
 
 		}
 
@@ -266,7 +266,7 @@ function serve(root: string): Server {
 		try {
 			return path === undefined ? undefined : {
 				status: 200,
-				type: types[extname(path).toLowerCase()] ?? "application/octet-stream",
+				type: Types[extname(path).toLowerCase()] ?? "application/octet-stream",
 				body: readFileSync(path)
 			};
 		} catch {
@@ -278,7 +278,7 @@ function serve(root: string): Server {
 
 		const index = page.lastIndexOf("</body>");
 
-		return index < 0 ? `${page}${script}` : `${page.slice(0, index)}${script}${page.slice(index)}`;
+		return index < 0 ? `${page}${Script}` : `${page.slice(0, index)}${Script}${page.slice(index)}`;
 
 	}
 
@@ -326,7 +326,7 @@ function observe(root: string, notify: () => void): () => void {
 
 	function changed(): void {
 		clearTimeout(timer);
-		timer = setTimeout(notify, delay);
+		timer = setTimeout(notify, Delay);
 	}
 
 	function anchor(path: string): string {

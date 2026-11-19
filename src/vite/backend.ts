@@ -22,7 +22,7 @@ import type { Plugin } from "./plugin.js";
 /**
  * The time in milliseconds between connection attempts to a proxy target not yet accepting connections.
  */
-const interval = 250;
+const Interval = 250;
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -116,7 +116,7 @@ function ready(target: URL, deadline: number): Promise<void> {
 
 		: Date.now() >= deadline ? Promise.reject(new Error(`unreachable proxy target <${target.href}>`))
 
-		: delay(Math.min(interval, deadline-Date.now())).then(() => ready(target, deadline))
+		: delay(Math.min(Interval,deadline-Date.now())).then(() => ready(target, deadline))
 	);
 
 }

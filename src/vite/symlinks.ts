@@ -16,7 +16,7 @@
 
 import { realpathSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve, sep } from "node:path";
-import { bare, exported, external, linked, loaded, lookup, manifest, reached, shared, survey } from "../pkgs.js";
+import { bare, exported, external, linked, loaded, lookup, manifest, peers, reached, shared, survey } from "../pkgs.js";
 import type { Plugin } from "./plugin.js";
 
 
@@ -139,9 +139,7 @@ export function symlinks({
 
 				return {
 					resolve: {
-						dedupe: linked($root).flatMap(path => [
-							manifest(path).name, ...Object.keys(manifest(path).peerDependencies ?? {})
-						])
+						dedupe: linked($root).flatMap(path => [manifest(path).name, ...peers(path)])
 					}
 				};
 

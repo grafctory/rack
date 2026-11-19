@@ -256,6 +256,19 @@ export function declared(path: string, dev: boolean = false): readonly string[] 
 }
 
 /**
+ * Lists the peers a package declares.
+ *
+ * @param path The path of the package folder
+ *
+ * @returns The names in the `peerDependencies` of the package at `path`, those declared optional included
+ */
+export function peers(path: string): readonly string[] {
+
+	return Object.keys(manifest(path).peerDependencies ?? {});
+
+}
+
+/**
  * Lists the packages installed into a `node_modules` folder.
  *
  * Nested copies are listed as well, down through the `node_modules` of each installed copy; links are listed but not
@@ -531,15 +544,6 @@ function checkouts(entries: readonly Installed[]): readonly string[] {
 function copied(entries: readonly Installed[]): readonly Installed[] {
 
 	return entries.filter(({ link, path }) => !link && described(path));
-
-}
-
-/**
- * Lists the peers a package declares, those declared optional included.
- */
-function peers(path: string): readonly string[] {
-
-	return Object.keys(manifest(path).peerDependencies ?? {});
 
 }
 

@@ -194,19 +194,9 @@ async function terminate(group: number): Promise<void> {
 
 	signal(group, "SIGTERM");
 
-	if ( await vanished(group, Date.now()+Grace) ) {
+	await vanished(group, Date.now()+Grace).then(gone => gone || signal(group, "SIGKILL") && vanished(group, Infinity));
 
-		release(group);
-
-	} else {
-
-		signal(group, "SIGKILL");
-
-		await vanished(group, Infinity);
-
-		release(group);
-
-	}
+	release(group);
 
 }
 
