@@ -16,7 +16,9 @@
 
 import type { Plugin as VitePlugin } from "vite";
 import { describe, expectTypeOf, it } from "vitest";
-import { type Plugin, symlinks } from "./symlinks.js";
+import { backend } from "./backend.js";
+import type { Plugin } from "./plugin.js";
+import { symlinks } from "./symlinks.js";
 
 
 describe("Plugin", () => {
@@ -27,6 +29,10 @@ describe("Plugin", () => {
 
 	it("should be returned by symlinks()", async () => {
 		expectTypeOf(symlinks).returns.toEqualTypeOf<Plugin>();
+	});
+
+	it("should be returned by backend()", async () => {
+		expectTypeOf(backend).returns.toEqualTypeOf<Plugin>();
 	});
 
 });

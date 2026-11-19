@@ -7,6 +7,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.8.0](https://github.com/metreeca/rack/compare/v0.7.0...HEAD)
 
+### Added
+
+- `backend()` Vite plugin holds the dev server, and the browser `--open` launches, until every `server.proxy` target
+  accepts connections, so a client started together with its local backend no longer needs `wait-on`; the dev server
+  fails to start once `timeout` expires with a target still unreachable, and servers in middleware mode never wait
+
 ### Changed
 
 - `@metreeca/rack/node` hooks and the `symlinks` plugin load a single copy of every package a project shares with its
@@ -15,6 +21,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `symlinks` plugin fails Vite and Vitest startup when no checkout is linked, as after `npm ci`, and a package the
   application loads at runtime is installed in more than one copy, listing the version and dependents of each copy;
   duplicates reached only through development tools stay silent, and `overrides` in `package.json` settles the rest
+- The Vite `Plugin` type returned by the plugins declares every hook as optional, so it covers both `symlinks` and
+  `backend`; configurations passing it to Vite are unaffected, while code calling its hooks directly must check them
 
 ## [0.7.0](https://github.com/metreeca/rack/compare/v0.6.1...v0.7.0) - 2026-11-17
 

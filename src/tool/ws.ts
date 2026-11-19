@@ -232,12 +232,19 @@ function serve(root: string): Server {
 	function locate(pathname: string): string | undefined {
 
 		const path = decode(pathname);
-		const file = path === undefined ? undefined : join($root, path);
-		const offset = file === undefined ? undefined : relative($root, file);
 
-		return offset === undefined || offset === ".." || offset.startsWith(`..${sep}`) || isAbsolute(offset)
-			? undefined
-			: file;
+		if ( path === undefined ) {
+
+			return undefined;
+
+		} else {
+
+			const file = join($root, path);
+			const offset = relative($root, file);
+
+			return offset === ".." || offset.startsWith(`..${sep}`) || isAbsolute(offset) ? undefined : file;
+
+		}
 
 	}
 

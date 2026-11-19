@@ -17,37 +17,7 @@
 import { realpathSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve, sep } from "node:path";
 import { bare, exported, external, linked, loaded, lookup, manifest, reached, shared, survey } from "../pkgs.js";
-
-
-/**
- * The plugin created by {@link symlinks}, accepted wherever a Vite or Vitest configuration takes a `Plugin`.
- *
- * The type is spelled out in full rather than imported from Vite, so that a project type-checking a configuration
- * against a linked `@metreeca/rack` checkout loads the Vite and `@types/node` declarations it installs for itself
- * only, never a second copy from the checkout. Vite and Vitest configurations thus type-check against the same
- * declarations whether `@metreeca/rack` is installed from the registry or linked to a local checkout.
- */
-export type Plugin = Readonly<{
-
-	name: string
-	enforce: "pre"
-
-	config(config: Readonly<{ root?: string }>): Readonly<{ resolve: Readonly<{ dedupe: string[] }> }> // mutable: as Vite declares it
-
-	configResolved(config: Readonly<{ root: string, server: Readonly<{ fs: Readonly<{ allow: string[] }> }> }>): void // mutable: as Vite declares it
-
-	resolveId(
-		this: Readonly<{
-			environment: Readonly<{ config: Readonly<{ root: string }> }>
-			resolve(id: string, importer?: string, options?: Readonly<{ skipSelf?: boolean }>): Promise<Readonly<{
-				id: string
-			}> | null>
-		}>,
-		id: string,
-		importer?: string
-	): string | null | Promise<Readonly<{ id: string }> | null>
-
-}>;
+import type { Plugin } from "./plugin.js";
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -185,7 +155,7 @@ export function symlinks({
 
 		resolveId(id, importer) {
 
-			const root = this.environment.config.root;
+			const { root } = this.environment.config;
 			const name = bare(id);
 			const base = importer && isAbsolute(importer) ? dirname(importer) : root;
 			const link = name && (lookup(name, base) ?? lookup(name, root));

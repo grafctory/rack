@@ -15,13 +15,16 @@
  */
 
 /**
- * Vite plugins for building and testing npm packages.
+ * Vite plugins for developing, building and testing npm packages and the web clients built on them.
  *
  * | Plugin           | Purpose                                                                         |
  * |------------------|---------------------------------------------------------------------------------|
  * | {@link symlinks} | Runs tests against the live source of locally linked packages, with no rebuild |
+ * | {@link backend}  | Holds the dev server back until the backends it proxies to accept connections  |
  *
  * @module
  */
 
-export { symlinks, type Plugin } from "./symlinks.js";
+export { backend } from "./backend.js";
+export type { Plugin } from "./plugin.js";
+export { symlinks } from "./symlinks.js";
