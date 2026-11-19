@@ -150,21 +150,19 @@ export function ln(...deps: readonly string[]): void {
 
 		const candidates = own
 			.flatMap(path => installed(join(path, "node_modules")))
-			.filter(({ name }) => linked.has(name));
-
-		// copies nested inside a replaced copy go along with it
-
-		return candidates
-			.filter(({ path }) => !candidates.some(outer => path.startsWith(`${outer.path}${sep}`)))
 			.flatMap(({ modules, name, path: copy }) => {
 
 				const path = linked.get(name);
 
-				return path === undefined || existsSync(copy) && realpathSync(copy) === realpathSync(path)
-					? []
-					: [{ modules, name, path }];
+				return path === undefined ? [] : [{ modules, name, path, copy }];
 
 			});
+
+		// copies nested inside a replaced copy go along with it
+
+		return candidates
+			.filter(({ copy }) => !candidates.some(outer => copy.startsWith(`${outer.copy}${sep}`)))
+			.filter(({ path, copy }) => !existsSync(copy) || realpathSync(copy) !== realpathSync(path));
 
 	}
 

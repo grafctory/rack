@@ -12,6 +12,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `backend()` Vite plugin holds the dev server, and the browser `--open` launches, until every `server.proxy` target
   accepts connections, so a client started together with its local backend no longer needs `wait-on`; the dev server
   fails to start once `timeout` expires with a target still unreachable, and servers in middleware mode never wait
+- `ush up <command> [<arg>]... [+ <command> [<arg>]...]...` runs commands in parallel, writing straight to the
+  terminal; the first command to exit, or an interrupt, stops the others with every process they started, so no
+  watcher outlives the script, and the tool exits with the status of the first command to exit
 
 ### Changed
 

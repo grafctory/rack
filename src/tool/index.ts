@@ -20,7 +20,8 @@
  * Unix-like command line tools for npm package scripts.
  *
  * Each tool runs as a subcommand of the `ush` command installed with the package, as in `ush <tool> <argument>...`.
- * Tools behave the same on every platform and shell, and leave system commands with the same name untouched.
+ * Tools behave the same on every shell and on every platform they support, and leave system commands with the same
+ * name untouched; tools running other commands support macOS and Linux only, as they rely on POSIX process groups.
  * `ush --help` lists the available tools, and `ush <tool> --help` prints the options and operands of a single tool.
  *
  * Tools print what they act on to stdout, one path or address per line prefixed with the tool name, so that a script
@@ -28,8 +29,8 @@
  * exits with a non-zero status; the message is prefixed with the full command, so the log points to the failing one.
  *
  * Build scripts can call the same tools as functions, passing the operands as arguments; tools accepting options are
- * configured through their `with()` method, as in `ws.with({ open: "api/" })("docs")`. A function throws on failure
- * instead of printing an error message to stderr and setting a non-zero exit status for the process.
+ * configured through their `with()` method, as in `ws.with({ open: "api/" })("docs")`. A function throws on failure,
+ * or rejects if it finishes later, instead of printing an error message to stderr and setting a non-zero exit status.
  *
  * @module
  */
@@ -39,13 +40,15 @@ import { cp } from "./cp.js";
 import { cli, usage } from "./index.core.js";
 import { ln } from "./ln.js";
 import { rm } from "./rm.js";
+import { up } from "./up.js";
 import { ws } from "./ws.js";
 
 export {
 	cp,
 	rm,
 	ln,
-	ws
+	ws,
+	up
 };
 
 
@@ -53,7 +56,8 @@ const commands = [
 	cp,
 	rm,
 	ln,
-	ws
+	ws,
+	up
 ];
 
 reject.args = [
@@ -82,7 +86,8 @@ if ( import.meta.main ) {
  *
  * @param args The script path, followed by the tool name and its arguments; defaults to the process command line
  *
- * @returns A promise resolving to the exit status once the tool finishes: `0` on success, `1` on failure
+ * @returns A promise resolving to the exit status once the tool finishes: `0` on success, otherwise the positive
+ * integer `status` the error carries, such as the exit status of a command the tool ran, or `1` if it carries none
  */
 function ush([path, name, ...operands]: readonly string[] = process.argv.slice(1)): Promise<number> {
 

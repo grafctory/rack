@@ -22,7 +22,8 @@ import { parseArgs, type ParseArgsOptionDescriptor } from "node:util";
  * A command line tool, declaring the options and operands it accepts.
  *
  * The tool throws a `TypeError` on a command line it cannot act on, so that the error message also points to the help.
- * A tool that finishes later returns a promise instead, rejected with the error it would otherwise throw.
+ * A tool that finishes later returns a promise instead, rejected with the error it would otherwise throw. An error with
+ * a positive integer `status`, such as the exit status of a command the tool ran, sets the exit status in place of `1`.
  */
 export interface Tool {
 
@@ -47,7 +48,9 @@ export interface Tool {
 	/**
 	 * The operand synopsis, one entry per operand, such as `["<target>", "<pattern>..."]`.
 	 *
-	 * Operands beyond the declared ones are rejected as usage errors, unless the last synopsis ends with `...`.
+	 * Operands beyond the declared ones are rejected as usage errors, unless the last synopsis ends with `...`. A tool
+	 * whose first synopsis is `<command>` runs other commands: options are read only before its first operand, so that
+	 * the options following it reach the command run by the tool, as with `env` or `nohup`.
 	 */
 	readonly args: readonly string[]
 
@@ -94,15 +97,16 @@ export function usage({ opts = {}, args }: Tool): string {
  * options, missing required arguments, arguments given to options taking none, and operands beyond the declared ones.
  *
  * A tool that finishes later is awaited before the exit status is settled. Its rejection is reported as a thrown
- * error would be, so a rejected `TypeError` also points to `--help`, like any other usage error.
+ * error would be, so a rejected `TypeError` also points to `--help`, like any other usage error. A failing tool exits
+ * with the positive integer `status` its error carries, if any, so a tool running other commands passes on their status.
  *
  * @param tool The tool to run
  * @param name The command prefixing messages, as in `ush cp`; defaults to the bare script name, else the `tool` name
  * @param args The command line arguments after the command name; defaults to those the process was launched with
  * @param description The text printed by `--help` below the usage line, such as a list of subcommands
  *
- * @returns A promise resolving to the process exit status once the tool finishes: `0` on success, `1` on failure;
- * never rejected, since every failure is reported on stderr, so callers have no rejection to handle
+ * @returns A promise resolving to the process exit status once the tool finishes: `0` on success, otherwise the
+ * `status` of the error or `1`; never rejected, since every failure is reported on stderr instead
  */
 export async function cli(
 	tool: Tool,
@@ -152,7 +156,7 @@ export async function cli(
 			: `${name}: ${message}`
 		);
 
-		return 1;
+		return status(error);
 
 	}
 
@@ -168,7 +172,7 @@ export async function cli(
  *
  * @throws TypeError If an option is not declared, lacks a required argument, or is given an argument it does not take
  */
-function scan({ opts = {} }: Pick<Tool, "opts">, args: readonly string[]): {
+function scan({ opts = {}, args: synopsis }: Pick<Tool, "opts" | "args">, args: readonly string[]): {
 
 	readonly help: boolean
 	readonly options: readonly { readonly name: string, readonly value?: string }[]
@@ -178,18 +182,11 @@ function scan({ opts = {} }: Pick<Tool, "opts">, args: readonly string[]): {
 
 	const required = Object.keys(opts).filter(option => opts[option] && !optional(opts[option]));
 
-	const { values, positionals, tokens } = parseArgs({
-		args: [...args],
-		options: {
-			help: { type: "boolean", short: "h" },
-			...Object.fromEntries(required.map((option): [string, ParseArgsOptionDescriptor] =>
-				[option, { type: "string" }] // also read from the next argument
-			))
-		},
-		allowPositionals: true,
-		strict: false, // unknown options are rejected below, with a GNU-style message
-		tokens: true
-	});
+	const cut = synopsis[0] === "<command>" // options past the command belong to the command
+		? parse(args).tokens.find(token => token.kind === "positional")?.index ?? args.length
+		: args.length;
+
+	const { values, positionals, tokens } = parse(args.slice(0, cut));
 
 	const options = tokens.flatMap(token => token.kind === "option" ? [token] : []);
 
@@ -214,10 +211,41 @@ function scan({ opts = {} }: Pick<Tool, "opts">, args: readonly string[]): {
 		return {
 			help: values.help === true,
 			options: options.filter(({ name }) => name !== "help"),
-			operands: positionals
+			operands: [...positionals, ...args.slice(cut)]
 		};
 
 	}
+
+
+	function parse(args: readonly string[]) {
+		return parseArgs({
+			args: [...args],
+			options: {
+				help: { type: "boolean", short: "h" },
+				...Object.fromEntries(required.map((option): [string, ParseArgsOptionDescriptor] =>
+					[option, { type: "string" }] // also read from the next argument
+				))
+			},
+			allowPositionals: true,
+			strict: false, // unknown options are rejected below, with a GNU-style message
+			tokens: true
+		});
+	}
+
+}
+
+/**
+ * Settles the exit status of a failed tool.
+ *
+ * @param error The error the tool failed with
+ *
+ * @returns The positive integer `status` carried by `error`, if any; `1` otherwise
+ */
+function status(error: unknown): number {
+
+	const value = error instanceof Error && "status" in error ? error.status : undefined;
+
+	return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : 1;
 
 }
 

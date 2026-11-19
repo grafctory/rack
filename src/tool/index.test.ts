@@ -33,18 +33,24 @@ import { cli, type Tool, usage } from "./index.core.js";
 import * as tool from "./index.js";
 import { ln } from "./ln.js";
 import { rm } from "./rm.js";
+import { up } from "./up.js";
 import { ws } from "./ws.js";
 
 
 describe("@metreeca/rack/tool", () => {
 
 	it("should export the tools", async () => {
-		expect({ ...tool }).toEqual({ cp, rm, ln, ws }); // spread drops the namespace Symbol.toStringTag key
+		expect({ ...tool }).toEqual({ cp, rm, ln, ws, up }); // spread drops the namespace Symbol.toStringTag key
 	});
 
 	it("should expose the command line synopsis of each tool", async () => {
-		expect([cp, rm, ln, ws].map(usage))
-			.toEqual(["<target> <pattern>...", "<pattern>...", "[<deps>]...", "[--open[=<page>]] <root>"]);
+		expect([cp, rm, ln, ws, up].map(usage)).toEqual([
+			"<target> <pattern>...",
+			"<pattern>...",
+			"[<deps>]...",
+			"[--open[=<page>]] <root>",
+			"<command> [<arg>]... [+ <command> [<arg>]...]..."
+		]);
 	});
 
 });
@@ -119,7 +125,8 @@ describe("ush", () => {
 			["cp", "<target> <pattern>..."],
 			["rm", "<pattern>..."],
 			["ln", "[<deps>]..."],
-			["ws", "[--open[=<page>]] <root>"]
+			["ws", "[--open[=<page>]] <root>"],
+			["up", "<command> [<arg>]... [+ <command> [<arg>]...]..."]
 		])("should print the usage of %s under the full command", async (command, help) => {
 			expect(ush(command, "--help")).toEqual({ status: 0, stdout: `Usage: ush ${command} ${help}\n`, stderr: "" });
 		});
@@ -129,6 +136,18 @@ describe("ush", () => {
 				status: 1,
 				stdout: "",
 				stderr: "ush cp: missing target operand\nTry 'ush cp --help' for more information.\n"
+			});
+		});
+
+		it("should pass the options following a command to the command run by the tool", async () => {
+			expect(ush("up", "sh", "-c", "exit 0").status).toBe(0);
+		});
+
+		it("should exit with the status of the command run by the tool", async () => {
+			expect(ush("up", "sh", "-c", "exit 3")).toEqual({
+				status: 3,
+				stdout: "",
+				stderr: "ush up: command <sh -c exit 3> exited with status <3>\n"
 			});
 		});
 
@@ -147,6 +166,7 @@ describe("ush", () => {
 					"  rm <pattern>...",
 					"  ln [<deps>]...",
 					"  ws [--open[=<page>]] <root>",
+					"  up <command> [<arg>]... [+ <command> [<arg>]...]...",
 					""
 				].join("\n"),
 				stderr: ""
@@ -407,6 +427,59 @@ describe("cli()", () => {
 		it("should report other errors without pointing to the help", async () => {
 			await expect(run(["a"], command(() => { throw new Error("failed operation"); }))).resolves.toBe(1);
 			expect(printed(stderr)).toBe("tool: failed operation");
+		});
+
+	});
+
+	describe("command tools", () => {
+
+		const args = ["<command>", "[<arg>]..."];
+
+
+		it("should pass the options following the first operand as operands", async () => {
+			const body = vi.fn();
+			await expect(run(["sh", "-c", "--watch", "--", "-x"], command(body, undefined, args))).resolves.toBe(0);
+			expect(body).toHaveBeenCalledWith("sh", "-c", "--watch", "--", "-x");
+		});
+
+		it("should read the options preceding the first operand", async () => {
+			const body = vi.fn();
+			await expect(run(["--help", "sh", "--watch"], command(body, undefined, args))).resolves.toBe(0);
+			expect(printed(stdout)).toBe("Usage: tool <command> [<arg>]...");
+			expect(body).not.toHaveBeenCalled();
+		});
+
+		it("should reject undeclared options preceding the first operand", async () => {
+			await expect(run(["--force", "sh"], command(() => {}, undefined, args))).resolves.toBe(1);
+			expect(printed(stderr)).toMatch(/^tool: unrecognized option <--force>\n/);
+		});
+
+		it("should keep reading options anywhere for other tools", async () => {
+			await expect(run(["sh", "--force"], command(() => {}))).resolves.toBe(1);
+			expect(printed(stderr)).toMatch(/^tool: unrecognized option <--force>\n/);
+		});
+
+	});
+
+	describe("exit status", () => {
+
+		it("should exit with the integer status carried by the error", async () => {
+			await expect(run(["a"], command(() => {
+				throw Object.assign(new Error("failed command"), { status: 3 });
+			}))).resolves.toBe(3);
+			expect(printed(stderr)).toBe("tool: failed command");
+		});
+
+		it("should exit with the integer status carried by a rejection", async () => {
+			await expect(run(["a"], command(() => Promise.reject(
+				Object.assign(new Error("failed command"), { status: 3 })
+			)))).resolves.toBe(3);
+		});
+
+		it.each([0, 1.5, "3", null])("should exit with 1 for a status of %j", async status => {
+			await expect(run(["a"], command(() => {
+				throw Object.assign(new Error("failed command"), { status });
+			}))).resolves.toBe(1);
 		});
 
 	});
