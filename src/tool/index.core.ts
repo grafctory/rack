@@ -106,7 +106,7 @@ export function cli(
 
 	try {
 
-		const { help, options, operands } = scan(tool, args, true);
+		const { help, options, operands } = scan(tool, args);
 
 		const variadic = tool.args.at(-1)?.endsWith("...") === true;
 		const extra = variadic ? undefined : operands.at(tool.args.length);
@@ -157,17 +157,16 @@ export function cli(
 }
 
 /**
- * Reads a command line against the options a tool declares.
+ * Reads a command line against the options a tool declares, along with `--help` and `-h`.
  *
  * @param tool The tool declaring the options accepted
  * @param args The command line arguments
- * @param help Whether `--help` and `-h` are also accepted
  *
  * @returns Whether help was requested, the options set in command line order with any argument, and the operands
  *
  * @throws TypeError If an option is not declared, lacks a required argument, or is given an argument it does not take
  */
-function scan({ opts = {} }: Pick<Tool, "opts">, args: readonly string[], help: boolean = false): {
+function scan({ opts = {} }: Pick<Tool, "opts">, args: readonly string[]): {
 
 	readonly help: boolean
 	readonly options: readonly { readonly name: string, readonly value?: string }[]
@@ -180,7 +179,7 @@ function scan({ opts = {} }: Pick<Tool, "opts">, args: readonly string[], help: 
 	const { values, positionals, tokens } = parseArgs({
 		args: [...args],
 		options: {
-			...(help ? { help: { type: "boolean", short: "h" } } : {}),
+			help: { type: "boolean", short: "h" },
 			...Object.fromEntries(required.map((option): [string, ParseArgsOptionDescriptor] =>
 				[option, { type: "string" }] // also read from the next argument
 			))
@@ -192,7 +191,7 @@ function scan({ opts = {} }: Pick<Tool, "opts">, args: readonly string[], help: 
 
 	const options = tokens.flatMap(token => token.kind === "option" ? [token] : []);
 
-	const unknown = options.find(option => !(help && option.name === "help") && !Object.hasOwn(opts, option.name));
+	const unknown = options.find(option => option.name !== "help" && !Object.hasOwn(opts, option.name));
 	const missing = options.find(option => option.value === undefined && required.includes(option.name));
 	const valued = options.find(option => option.value !== undefined && !opts[option.name]);
 

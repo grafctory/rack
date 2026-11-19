@@ -71,25 +71,35 @@ describe("symlinks()", () => {
 
 	beforeAll(async () => {
 
-		file(join(project, "package.json"), JSON.stringify({ name: "project", workspaces: ["packages/*"] }));
+		file(join(project, "package.json"), JSON.stringify({
+			name: "project", workspaces: ["packages/*"], dependencies: { direct: "*" }
+		}));
 
 		pkg(checkout, "linked");
 		pkg(fork, "linked", "source", { nested: "*" });
 		pkg(other, "other", "development");
 		pkg(join(root, "scoped"), "@scope/linked");
-		pkg(installed, "installed");
+		pkg(installed, "installed", "source", { "installed-peer": "*" });
 
 		pkg(bound, "bound", "source", { peer: "*" });
 
-		["peer", "private"].forEach(name => {
+		["peer", "private", "direct"].forEach(name => {
 			dep(join(project, "node_modules", name), name);
 			dep(join(bound, "node_modules", name), name);
 		});
 
 		dep(join(bound, "node_modules", "linked"), "linked"); // a registry copy of a package the project links
 
+		["installed-peer"].forEach(name => {
+			dep(join(project, "node_modules", name), name);
+			dep(join(bound, "node_modules", name), name);
+		});
+
+		dep(join(installed, "node_modules", "direct"), "direct"); // a version of its own, nested by npm
+
 		mkdirSync(join(project, "node_modules", "@scope"), { recursive: true });
 		mkdirSync(join(project, "packages", "nested", "node_modules"), { recursive: true });
+		file(join(project, "packages", "nested", "package.json"), JSON.stringify({ name: "nested-member" }));
 
 		symlinkSync(checkout, join(project, "node_modules", "linked"), "dir");
 		symlinkSync(join(root, "scoped"), join(project, "node_modules", "@scope", "linked"), "dir");
@@ -179,6 +189,20 @@ describe("symlinks()", () => {
 
 		it("should resolve peers from the project", async () => {
 			expect(await imported("peer")).toBe(join(project, "node_modules", "peer", "index.js"));
+		});
+
+		it("should resolve dependencies of the project from the project", async () => {
+			expect(await imported("direct")).toBe(join(project, "node_modules", "direct", "index.js"));
+		});
+
+		it("should resolve the peers of installed packages from the project", async () => {
+			expect(await imported("installed-peer")).toBe(join(project, "node_modules", "installed-peer", "index.js"));
+		});
+
+		it("should leave installed packages on their own copies of the dependencies of the project", async () => {
+			expect(await resolved("direct", "node_modules/installed/src/index.ts")).toBe(
+				join(installed, "node_modules", "direct", "index.js")
+			);
 		});
 
 		it("should resolve linked packages installed in the checkout from the project links", async () => {

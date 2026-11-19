@@ -16,10 +16,10 @@
 
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { createRequire, type ResolveHookSync } from "node:module";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { exports } from "resolve.exports";
-import { bare, lookup, manifest, shared } from "../symlinks.js";
+import { bare, external, lookup, manifest, shared } from "../symlinks.js";
 
 
 /**
@@ -33,10 +33,13 @@ import { bare, lookup, manifest, shared } from "../symlinks.js";
  * imports with no importer start from the root. A linked checkout importing a package the project links as well
  * loads the linked source rather than the registry copy it installs for itself, so the two never diverge.
  *
- * The process loads a single copy of every linked package and of each of their `peerDependencies`, as libraries
- * holding module state such as Preact hooks require. Those packages resolve from the root, whatever copies a linked
- * checkout installs for itself, and from the importer only where the root does not install them. Other dependencies
- * of a linked package resolve from its checkout, as Node does, since the process loads no other copy of them.
+ * The process loads a single copy of every package the project shares with its linked packages, as libraries holding
+ * module state such as Preact hooks require: linked packages and their `peerDependencies`, the dependencies of the
+ * project and of its workspace members, and the `peerDependencies` of any package installed there. A linked checkout
+ * importing one of those packages loads the copy the root installs, whatever copies it installs for itself, and its
+ * own only where the root installs none. Any other dependency of a linked package resolves from its checkout, as Node
+ * does, and stays a single copy, since neither the project nor another linked package shares it. Packages installed
+ * from the registry keep the copies npm settled for them, nested versions of their own included.
  *
  * Relative imports of a `.js` file from a TypeScript module, as `NodeNext` module resolution requires, resolve to the
  * `.ts` file next to it when the `.js` file does not exist. Sources compiled to `dist` thus run from `src` under plain
@@ -49,8 +52,9 @@ import { bare, lookup, manifest, shared } from "../symlinks.js";
  *
  * @param options The resolution settings
  *
- * @returns Synchronous module hooks resolving linked imports to source, deduplicating linked packages and their
- * peers, mapping `.js` relative imports to their `.ts` sources, and leaving all other imports to the default resolution
+ * @returns Synchronous module hooks resolving linked imports to source, loading a single copy of each package the
+ * project shares with its linked packages, mapping `.js` relative imports to their `.ts` sources, and leaving any
+ * other import to the default resolution, as for packages installed from the registry
  */
 export function symlinks({
 
@@ -74,7 +78,8 @@ export function symlinks({
 
 	const $conditions = typeof conditions === "string" ? [conditions] : conditions;
 
-	const names = new Set(shared(root)); // the packages resolved from the root, whoever imports them
+	const names = new Set(shared(root)); // the packages linked checkouts resolve from the root
+	const checkouts = external(root).map(path => `${path}${sep}`);
 
 	return {
 
@@ -95,7 +100,7 @@ export function symlinks({
 					? next(specifier, context) // subpath not exported or excluded by a null target: node reports it
 					: { url: pathToFileURL(resolve(path, target)).href, shortCircuit: true };
 
-			} else if ( name !== undefined && names.has(name) ) {
+			} else if ( name !== undefined && names.has(name) && checkouts.some(path => parent?.startsWith(path)) ) {
 
 				return rooted(specifier, context, next);
 

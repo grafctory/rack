@@ -3,6 +3,18 @@ title: Project Guidelines
 description: Development guidelines and conventions for the @metreeca/rack package.
 ---
 
+# Foundational Package
+
+> [!CAUTION]
+> Rack sits at the bottom of the `@metreeca/*` dependency graph: every other package builds and tests through it,
+> `@metreeca/core` included. It **MUST NOT** depend on any `@metreeca/*` package, at runtime or otherwise.
+
+- **Release order**: a dependency on Core or any sibling closes a cycle, leaving the release chain with no valid order
+- **Linked runs**: the `@metreeca/rack/node` hooks load before anything they resolve, so a sibling they imported would
+  always run from its build, never from the linked checkout the hooks exist to serve
+- **Helpers**: where Core already offers a helper, such as `unique()` from `@metreeca/core/arrays`, write a local
+  equivalent instead of importing it; keep it minimal and private to the module that needs it
+
 # CLI Tools
 
 - **Synopses** passed as `help` to `cli()` follow GNU usage lines, as in `<target> <pattern>...` or `[<deps>]...`

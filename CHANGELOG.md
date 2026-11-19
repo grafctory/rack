@@ -7,6 +7,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.8.0](https://github.com/metreeca/rack/compare/v0.7.0...HEAD)
 
+### Changed
+
+- `@metreeca/rack/node` hooks and the `symlinks` plugin load a single copy of every package a project shares with its
+  linked checkouts: the dependencies of the project and of its workspace members, and the peers any installed package
+  declares, next to linked packages and their peers, so libraries holding module state never split across copies
+
 ## [0.7.0](https://github.com/metreeca/rack/compare/v0.6.1...v0.7.0) - 2026-11-17
 
 ### Added

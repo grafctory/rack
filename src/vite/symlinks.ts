@@ -15,9 +15,9 @@
  */
 
 import { realpathSync } from "node:fs";
-import { dirname, isAbsolute, resolve } from "node:path";
+import { dirname, isAbsolute, join, resolve, sep } from "node:path";
 import { exports } from "resolve.exports";
-import { bare, linked, lookup, manifest, shared } from "../symlinks.js";
+import { bare, external, linked, lookup, manifest, shared } from "../symlinks.js";
 
 
 /**
@@ -38,10 +38,15 @@ export type Plugin = Readonly<{
 	configResolved(config: Readonly<{ root: string, server: Readonly<{ fs: Readonly<{ allow: string[] }> }> }>): void // mutable: as Vite declares it
 
 	resolveId(
-		this: Readonly<{ environment: Readonly<{ config: Readonly<{ root: string }> }> }>,
+		this: Readonly<{
+			environment: Readonly<{ config: Readonly<{ root: string }> }>
+			resolve(id: string, importer?: string, options?: Readonly<{ skipSelf?: boolean }>): Promise<Readonly<{
+				id: string
+			}> | null>
+		}>,
 		id: string,
 		importer?: string
-	): string | null
+	): string | null | Promise<Readonly<{ id: string }> | null>
 
 }>;
 
@@ -60,11 +65,13 @@ export type Plugin = Readonly<{
  * A package the importer resolves to an installed copy is looked up again from the Vite root, so a linked checkout
  * importing a package the project links as well loads the linked source rather than its own registry copy.
  *
- * The project and its linked packages load a single copy of every linked package and of each of their
- * `peerDependencies`, as libraries holding module state such as Preact hooks require: the links found in the
- * `node_modules` of the Vite root, of its ancestors and of its workspace members extend `resolve.dedupe`, so that
- * those packages always resolve from the project, dependencies prebundled by the optimizer included, whatever copies
- * a linked checkout installs. Other dependencies of a linked package resolve from its checkout, as Node does.
+ * The project and its linked packages load a single copy of every package the project shares with them, as libraries
+ * holding module state such as Preact hooks require: linked packages and their `peerDependencies`, the dependencies of
+ * the project and of its workspace members, and the `peerDependencies` of any package installed there. A linked
+ * checkout importing one of those packages loads the copy the project installs, whatever copies it installs for
+ * itself; linked packages and their peers extend `resolve.dedupe` as well, so that dependencies prebundled by the
+ * optimizer share them too. Any other dependency of a linked package resolves from its checkout, as Node does, since
+ * the project shares no copy of it, and packages installed from the registry keep the copies npm settled for them.
  *
  * The dev server serves the files of linked checkouts wherever they live, including the dependencies each one installs.
  * Their real paths are added to `server.fs.allow`, next to the configured entries or, if none are configured, next to
@@ -117,13 +124,29 @@ export function symlinks({
 
 	const $conditions = typeof conditions === "string" ? [conditions] : conditions;
 
+	let names: ReadonlySet<string> = new Set(); // assigned by the config hook, once the project root is known
+	let checkouts: readonly string[] = [];
+
 	return {
 
 		name: "symlinks",
 		enforce: "pre",
 
 		config({ root }) {
-			return { resolve: { dedupe: [...shared(resolve(root ?? ""))] } };
+
+			const $root = resolve(root ?? "");
+
+			names = new Set(shared($root));
+			checkouts = external($root).map(path => `${path}${sep}`);
+
+			return {
+				resolve: {
+					dedupe: linked($root).flatMap(path => [
+						manifest(path).name, ...Object.keys(manifest(path).peerDependencies ?? {})
+					])
+				}
+			};
+
 		},
 
 		configResolved({ root, server }) {
@@ -151,6 +174,11 @@ export function symlinks({
 					return null;
 
 				}
+
+			} else if ( name && names.has(name) && checkouts.some(path => importer?.startsWith(path)) ) {
+
+				return this.resolve(id, join(root, "package.json"), { skipSelf: true })
+					.then(resolved => resolved ?? this.resolve(id, importer, { skipSelf: true }));
 
 			} else {
 

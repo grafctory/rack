@@ -14,20 +14,9 @@
  * limitations under the License.
  */
 
-import {
-	chmodSync,
-	existsSync,
-	globSync,
-	lstatSync,
-	mkdirSync,
-	readdirSync,
-	realpathSync,
-	rmSync,
-	statSync,
-	symlinkSync
-} from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
-import { manifest } from "../symlinks.js";
+import { chmodSync, existsSync, mkdirSync, realpathSync, rmSync, symlinkSync } from "node:fs";
+import { dirname, join, relative, resolve, sep } from "node:path";
+import { children, declared, described, installed, manifest, projects } from "../symlinks.js";
 
 
 /**
@@ -104,28 +93,23 @@ export function ln(...deps: readonly string[]): void {
 		throw new Error(`missing package manifest <${local}>`);
 	}
 
-	const own = packages(home);
+	const own = projects(home);
 	const names = new Set(own.map(path => manifest(path).name));
 
 	const index = new Map((deps.length ? deps : [".."])
 		.map(dep => resolve(dep))
-		.flatMap(dep => existsSync(join(dep, "package.json"))
-			? [dep]
-			: children(dep).map(name => join(dep, name)).filter(folder)
-		)
-		.flatMap(packages)
+		.flatMap(dep => described(dep) ? [dep] : children(dep).map(name => join(dep, name)))
+		.flatMap(projects)
 		.map((path): [string, string] => [manifest(path).name, path])
 		.filter(([name]) => !names.has(name))
 		.reverse() // later entries override earlier ones, so that the folder listed first wins
 	);
 
-	const linked = closure(own.flatMap(path => dependencies(path, true)));
+	const linked = closure(own.flatMap(path => declared(path, true)));
 
 	linked.forEach((path, name) => link({ modules: join(home, "node_modules"), name, path }));
 
-	own
-		.flatMap(path => copies(join(path, "node_modules")))
-		.forEach(link);
+	copies().forEach(link);
 
 
 	function link({ modules, name, path }: Link): void {
@@ -164,53 +148,26 @@ export function ln(...deps: readonly string[]): void {
 
 	}
 
-	function copies(modules: string): readonly Link[] {
-		return children(modules)
-			.filter(name => !name.startsWith("."))
-			.flatMap(name => name.startsWith("@")
-				? children(join(modules, name)).map(member => `${name}/${member}`)
-				: [name]
-			)
-			.flatMap(name => {
+	function copies(): readonly Link[] {
 
-				const copy = join(modules, name);
+		const candidates = own
+			.flatMap(path => installed(join(path, "node_modules")))
+			.filter(({ name }) => linked.has(name));
+
+		// copies nested inside a replaced copy go along with it
+
+		return candidates
+			.filter(({ path }) => !candidates.some(outer => path.startsWith(`${outer.path}${sep}`)))
+			.flatMap(({ modules, name, path: copy }) => {
+
 				const path = linked.get(name);
 
-				if ( path !== undefined ) {
-
-					return existsSync(copy) && realpathSync(copy) === realpathSync(path) ? [] : [{
-						modules,
-						name,
-						path
-					}];
-
-				} else if ( lstatSync(copy).isSymbolicLink() ) {
-
-					return []; // a link into a checkout, whose own setup settles its copies
-
-				} else {
-
-					return copies(join(copy, "node_modules"));
-
-				}
+				return path === undefined || existsSync(copy) && realpathSync(copy) === realpathSync(path)
+					? []
+					: [{ modules, name, path }];
 
 			});
-	}
 
-	function packages(path: string): readonly string[] {
-		return existsSync(join(path, "package.json")) ? [path, ...(manifest(path).workspaces ?? [])
-			.flatMap(pattern => globSync(pattern, { cwd: path }))
-			.map(member => join(path, member))
-			.filter(member => existsSync(join(member, "package.json")))
-		] : [];
-	}
-
-	function children(path: string): readonly string[] {
-		return folder(path) ? readdirSync(path) : [];
-	}
-
-	function folder(path: string): boolean {
-		return statSync(path, { throwIfNoEntry: false })?.isDirectory() ?? false;
 	}
 
 	function closure(
@@ -227,23 +184,8 @@ export function ln(...deps: readonly string[]): void {
 		}));
 
 		return fresh.size
-			? closure([...fresh.values()].flatMap(path => dependencies(path)), new Map([...closed, ...fresh]))
+			? closure([...fresh.values()].flatMap(path => declared(path)), new Map([...closed, ...fresh]))
 			: closed;
-
-	}
-
-	function dependencies(path: string, dev: boolean = false): readonly string[] {
-
-		const { dependencies, devDependencies, peerDependencies, optionalDependencies } = manifest(path);
-
-		return Object.keys({
-
-			...dependencies,
-			...(dev ? devDependencies : {}),
-			...peerDependencies,
-			...optionalDependencies
-
-		});
 
 	}
 

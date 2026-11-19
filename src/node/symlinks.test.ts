@@ -80,16 +80,15 @@ describe("symlinks()", () => {
 
 	/**
 	 * Mimics the default resolver: builtins resolve to themselves, relative specifiers against the importer, bare
-	 * specifiers from the `node_modules` of the importer's package up to the project's; missing files fail.
+	 * specifiers from the `node_modules` nearest to the importer up through its ancestors; missing files fail.
 	 */
 	function next(specifier: string, context?: Partial<ResolveHookContext>) {
 
 		const parent = context?.parentURL === undefined ? join(project, "index.js") : fileURLToPath(context.parentURL);
-		const packages = [checkout, bound, project].filter(path => parent.startsWith(path));
 
 		const candidates = specifier.startsWith("node:") ? []
 			: specifier.startsWith(".") ? [join(dirname(parent), specifier)]
-				: [...packages, project].map(path => join(path, "node_modules", specifier, "index.js"));
+				: lookups(dirname(parent)).map(modules => join(modules, specifier, "index.js"));
 
 		const found = candidates.find(existsSyncSafe);
 
@@ -101,6 +100,10 @@ describe("symlinks()", () => {
 			throw Object.assign(new Error(`Cannot find module '${specifier}'`), { code: "ERR_MODULE_NOT_FOUND" });
 		}
 
+	}
+
+	function lookups(directory: string): readonly string[] {
+		return [join(directory, "node_modules"), ...(dirname(directory) === directory ? [] : lookups(dirname(directory)))];
 	}
 
 	function existsSyncSafe(path: string) {
@@ -126,16 +129,22 @@ describe("symlinks()", () => {
 
 	beforeAll(async () => {
 
-		file(join(project, "package.json"), JSON.stringify({ name: "project", type: "module" }));
+		file(join(project, "package.json"), JSON.stringify({
+			name: "project", type: "module", dependencies: { direct: "*" }
+		}));
 
 		pkg(checkout, "linked");
 		pkg(bound, "bound", { peer: "*", optional: "*" });
 
 		dep(installed, "installed");
+		dep(join(installed, "node_modules", "direct"), "direct"); // a version of its own, nested by npm
+		dep(join(installed, "node_modules", "peer"), "peer");
 		dep(join(project, "node_modules", "peer"), "peer");
 		dep(join(bound, "node_modules", "peer"), "peer");
 		dep(join(bound, "node_modules", "optional"), "optional");
 		dep(join(bound, "node_modules", "private"), "private");
+		dep(join(project, "node_modules", "direct"), "direct");
+		dep(join(bound, "node_modules", "direct"), "direct");
 		dep(join(bound, "node_modules", "linked"), "linked"); // a registry copy of a package the project links
 
 		symlinkSync(checkout, join(project, "node_modules", "linked"), "dir");
@@ -178,6 +187,10 @@ describe("symlinks()", () => {
 			expect(resolved("peer", importer).url).toBe(url(join(project, "node_modules/peer/index.js")));
 		});
 
+		it("should resolve dependencies of the project from the project", async () => {
+			expect(resolved("direct", importer).url).toBe(url(join(project, "node_modules/direct/index.js")));
+		});
+
 		it("should resolve peers missing from the project from their checkout", async () => {
 			expect(resolved("optional", importer).url).toBe(url(join(bound, "node_modules/optional/index.js")));
 		});
@@ -216,6 +229,14 @@ describe("symlinks()", () => {
 
 		it("should leave installed packages to the default resolution", async () => {
 			expect(resolved("installed").calls).toHaveLength(1);
+		});
+
+		it("should leave installed packages on their own copies of the dependencies of the project", async () => {
+			expect(resolved("direct", join(installed, "index.js")).url).toBe(url(join(installed, "node_modules/direct/index.js")));
+		});
+
+		it("should leave installed packages on their own copies of the peers of linked packages", async () => {
+			expect(resolved("peer", join(installed, "index.js")).url).toBe(url(join(installed, "node_modules/peer/index.js")));
 		});
 
 		it("should leave builtins to the default resolution", async () => {
