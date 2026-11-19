@@ -416,10 +416,11 @@ export function children(path: string): readonly string[] {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
- * The package manifest fields the linked package resolvers and the `ln` command rely on.
+ * The package manifest fields the linked package resolvers and the `ln` and `qc` commands rely on.
  */
 type Manifest = Package & Readonly<{
 
+	private?: boolean
 	bin?: string | Readonly<Record<string, string>>
 	workspaces?: readonly string[]
 

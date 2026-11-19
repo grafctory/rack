@@ -33,6 +33,7 @@ import { cli, type Tool, usage } from "./index.core.js";
 import * as tool from "./index.js";
 import { ln } from "./ln.js";
 import { rm } from "./rm.js";
+import { qc } from "./qc.js";
 import { up } from "./up.js";
 import { ws } from "./ws.js";
 
@@ -40,16 +41,17 @@ import { ws } from "./ws.js";
 describe("@metreeca/rack/tool", () => {
 
 	it("should export the tools", async () => {
-		expect({ ...tool }).toEqual({ cp, rm, ln, ws, up }); // spread drops the namespace Symbol.toStringTag key
+		expect({ ...tool }).toEqual({ cp, rm, ln, ws, up, qc }); // spread drops the namespace Symbol.toStringTag key
 	});
 
 	it("should expose the command line synopsis of each tool", async () => {
-		expect([cp, rm, ln, ws, up].map(usage)).toEqual([
+		expect([cp, rm, ln, ws, up, qc].map(usage)).toEqual([
 			"<target> <pattern>...",
 			"<pattern>...",
 			"[<deps>]...",
 			"[--open[=<page>]] <root>",
-			"<command> [<arg>]... [+ <command> [<arg>]...]..."
+			"<command> [<arg>]... [+ <command> [<arg>]...]...",
+			"[<root>]"
 		]);
 	});
 
@@ -126,7 +128,8 @@ describe("ush", () => {
 			["rm", "<pattern>..."],
 			["ln", "[<deps>]..."],
 			["ws", "[--open[=<page>]] <root>"],
-			["up", "<command> [<arg>]... [+ <command> [<arg>]...]..."]
+			["up", "<command> [<arg>]... [+ <command> [<arg>]...]..."],
+			["qc", "[<root>]"]
 		])("should print the usage of %s under the full command", async (command, help) => {
 			expect(ush(command, "--help")).toEqual({ status: 0, stdout: `Usage: ush ${command} ${help}\n`, stderr: "" });
 		});
@@ -167,6 +170,7 @@ describe("ush", () => {
 					"  ln [<deps>]...",
 					"  ws [--open[=<page>]] <root>",
 					"  up <command> [<arg>]... [+ <command> [<arg>]...]...",
+					"  qc [<root>]",
 					""
 				].join("\n"),
 				stderr: ""
@@ -201,6 +205,26 @@ describe("ush", () => {
 				stdout: "",
 				stderr: "tool: missing command operand\nTry 'tool --help' for more information.\n"
 			});
+		});
+
+		it("should name messages after ush when the script is run directly", async () => {
+
+			const { status, stdout, stderr } = spawnSync(process.execPath, [join(root, bin.ush)], { encoding: "utf8" });
+
+			expect({ status, stdout, stderr }).toEqual({
+				status: 1,
+				stdout: "",
+				stderr: "ush: missing command operand\nTry 'ush --help' for more information.\n"
+			});
+
+		});
+
+		it("should name messages after ush when the script is run through a link named after it", async () => {
+
+			symlinkSync(join(root, bin.ush), join(links, "index.js"));
+
+			expect(run("index.js").stderr).toBe("ush: missing command operand\nTry 'ush --help' for more information.\n");
+
 		});
 
 	});

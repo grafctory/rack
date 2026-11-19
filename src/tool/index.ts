@@ -39,6 +39,7 @@ import { parse } from "node:path";
 import { cp } from "./cp.js";
 import { cli, usage } from "./index.core.js";
 import { ln } from "./ln.js";
+import { qc } from "./qc.js";
 import { rm } from "./rm.js";
 import { up } from "./up.js";
 import { ws } from "./ws.js";
@@ -48,7 +49,8 @@ export {
 	rm,
 	ln,
 	ws,
-	up
+	up,
+	qc
 };
 
 
@@ -57,7 +59,8 @@ const commands = [
 	rm,
 	ln,
 	ws,
-	up
+	up,
+	qc
 ];
 
 reject.args = [
@@ -81,7 +84,8 @@ if ( import.meta.main ) {
  * Runs the tool named on a command line, as in `ush rm dist`, with GNU-style help and error messages.
  *
  * `ush --help` lists every tool with its options and operands, and `ush <tool> --help` prints the usage of one tool.
- * Messages are prefixed with the command as invoked, as in `ush cp: missing target operand`. Messages about a malformed
+ * Messages are prefixed with the command as invoked, as in `ush cp: missing target operand`, or with `ush` where the
+ * script is run directly, as in `node dist/tool/index.js` or through a Windows command shim. Messages about a malformed
  * command line also point to the help of the command that received it, either `ush --help` or `ush <tool> --help`.
  *
  * @param args The script path, followed by the tool name and its arguments; defaults to the process command line
@@ -91,7 +95,8 @@ if ( import.meta.main ) {
  */
 function ush([path, name, ...operands]: readonly string[] = process.argv.slice(1)): Promise<number> {
 
-	const program = parse(path).name;
+	const invoked = parse(path).name;
+	const program = invoked === parse(import.meta.filename).name ? "ush" : invoked; // only a bin link names the command
 	const command = commands.find(tool => tool.name === name);
 
 	return command

@@ -15,6 +15,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `ush up <command> [<arg>]... [+ <command> [<arg>]...]...` runs commands in parallel, writing straight to the
   terminal; the first command to exit, or an interrupt, stops the others with every process they started, so no
   watcher outlives the script, and the tool exits with the status of the first command to exit
+- `ush qc [<root>]` packs every publishable package, installs the tarballs into a scratch folder with nothing linked,
+  and imports every exported subpath as a plain consumer would, failing on files left out of the package, missing
+  declarations, undeclared runtime dependencies and subpaths reachable only through a custom source condition
 
 ### Changed
 
@@ -26,6 +29,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   duplicates reached only through development tools stay silent, and `overrides` in `package.json` settles the rest
 - The Vite `Plugin` type returned by the plugins declares every hook as optional, so it covers both `symlinks` and
   `backend`; configurations passing it to Vite are unaffected, while code calling its hooks directly must check them
+
+### Fixed
+
+- `ush` messages read `ush:` rather than `index:` when the script runs directly, as through a Windows command shim
 
 ## [0.7.0](https://github.com/metreeca/rack/compare/v0.6.1...v0.7.0) - 2026-11-17
 
