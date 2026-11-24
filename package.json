@@ -1,15 +1,15 @@
 {
-  "name": "@metreeca/rack",
-  "version": "0.8.1",
+  "name": "@grafctory/rack",
+  "version": "0.8.2",
   "description": "Everyday tooling for npm package development.",
   "keywords": [
     "typescript",
     "tooling",
     "vite"
   ],
-  "homepage": "https://metreeca.github.io/rack/",
+  "homepage": "https://grafctory.github.io/rack/",
   "bugs": {
-    "url": "https://github.com/metreeca/rack/issues",
+    "url": "https://github.com/grafctory/rack/issues",
     "email": "info@metreeca.com"
   },
   "license": "Apache-2.0",
@@ -20,7 +20,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/metreeca/rack.git"
+    "url": "git+https://github.com/grafctory/rack.git"
   },
   "type": "module",
   "sideEffects": [

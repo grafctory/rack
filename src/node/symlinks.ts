@@ -50,7 +50,7 @@ import { bare, exported, external, lookup, shared, workspace } from "../pkgs.js"
  * to it, and the hooks only add the resolution of linked packages to their TypeScript source.
  *
  * The hooks take effect once registered with `registerHooks` from `node:module`, before the first import they have
- * to resolve, typically from a module loaded with `--import`. Importing `@metreeca/rack/node` registers them with the
+ * to resolve, typically from a module loaded with `--import`. Importing `@grafctory/rack/node` registers them with the
  * conditions of the `tsconfig.json` nearest to the current working directory, with no setup module to write.
  *
  * @param options The resolution settings

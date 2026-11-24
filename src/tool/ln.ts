@@ -56,8 +56,8 @@ ln.args = [
  * package is touched: a linked checkout keeps resolving its own dependencies and peers from its own `node_modules`,
  * as settled by its own setup, so that an install in one checkout never changes what another project loads, and a
  * checkout shared by several projects serves all of them alike. Projects load a single copy of the packages a linked
- * checkout shares with them through the `symlinks` hooks of `@metreeca/rack/node` when running under Node, and
- * through the `symlinks` plugin of `@metreeca/rack/vite` when running under Vite or Vitest.
+ * checkout shares with them through the `symlinks` hooks of `@grafctory/rack/node` when running under Node, and
+ * through the `symlinks` plugin of `@grafctory/rack/vite` when running under Vite or Vitest.
  * Missing folders are skipped, so the same command runs unchanged on every machine, including machines where some of
  * the named folders hold no local checkouts at all and the package runs against its registry dependencies.
  *

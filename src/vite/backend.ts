@@ -36,7 +36,7 @@ const Interval = 250;
  * script launching both needs no separate wait step, and each backend address is stated in one place only:
  *
  * ```typescript
- * import { backend } from "@metreeca/rack/vite";
+ * import { backend } from "@grafctory/rack/vite";
  * import { defineConfig } from "vite";
  *
  * export default defineConfig({

@@ -23,7 +23,7 @@
  * on the command line, in an npm script or in the Node.js run configuration template of the IDE:
  *
  * ```shell
- * node --import @metreeca/rack/node src/index.ts
+ * node --import @grafctory/rack/node src/index.ts
  * ```
  *
  * The import fails if that configuration or a base it extends is malformed, cannot be resolved or extends itself.
@@ -31,7 +31,7 @@
  *
  * Plain `node` runs TypeScript sources through its built-in type stripping, which supports erasable syntax only.
  * Sources using `enum`, `namespace` or parameter properties need a loader such as `tsx` registered ahead of the
- * hooks, as in `node --import tsx --import @metreeca/rack/node` or `tsx --import @metreeca/rack/node`.
+ * hooks, as in `node --import tsx --import @grafctory/rack/node` or `tsx --import @grafctory/rack/node`.
  *
  * @module
  */

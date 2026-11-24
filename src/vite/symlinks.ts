@@ -91,7 +91,7 @@ import type { Plugin } from "./plugin.js";
  * The consuming project registers the plugin with the same condition in its Vite or Vitest configuration:
  *
  * ```typescript
- * import { symlinks } from "@metreeca/rack/vite";
+ * import { symlinks } from "@grafctory/rack/vite";
  * import { defineConfig } from "vitest/config";
  *
  * export default defineConfig({

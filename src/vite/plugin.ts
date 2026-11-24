@@ -18,9 +18,9 @@
  * A plugin created by this package, accepted wherever a Vite or Vitest configuration takes a `Plugin`.
  *
  * The type is spelled out in full rather than imported from Vite, so that a project type-checking a configuration
- * against a linked `@metreeca/rack` checkout loads the Vite and `@types/node` declarations it installs for itself
+ * against a linked `@grafctory/rack` checkout loads the Vite and `@types/node` declarations it installs for itself
  * only, never a second copy from the checkout. Vite and Vitest configurations thus type-check against the same
- * declarations whether `@metreeca/rack` is installed from the registry or linked to a local checkout.
+ * declarations whether `@grafctory/rack` is installed from the registry or linked to a local checkout.
  */
 export type Plugin = Readonly<{
 

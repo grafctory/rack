@@ -38,7 +38,7 @@ import { up } from "./up.js";
 import { ws } from "./ws.js";
 
 
-describe("@metreeca/rack/tool", () => {
+describe("@grafctory/rack/tool", () => {
 
 	it("should export the tools", async () => {
 		expect({ ...tool }).toEqual({ cp, rm, ln, ws, up, qc }); // spread drops the namespace Symbol.toStringTag key

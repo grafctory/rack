@@ -1,18 +1,18 @@
 ---
 title: Project Guidelines
-description: Development guidelines and conventions for the @metreeca/rack package.
+description: Development guidelines and conventions for the @grafctory/rack package.
 ---
 
 # Foundational Package
 
 > [!CAUTION]
-> Rack sits at the bottom of the `@metreeca/*` dependency graph: every other package builds and tests through it,
-> `@metreeca/core` included. It **MUST NOT** depend on any `@metreeca/*` package, at runtime or otherwise.
+> Rack sits at the bottom of the `@grafctory/*` dependency graph: every other package builds and tests through it,
+> `@grafctory/core` included. It **MUST NOT** depend on any `@grafctory/*` package, at runtime or otherwise.
 
 - **Release order**: a dependency on Core or any sibling closes a cycle, leaving the release chain with no valid order
-- **Linked runs**: the `@metreeca/rack/node` hooks load before anything they resolve, so a sibling they imported would
+- **Linked runs**: the `@grafctory/rack/node` hooks load before anything they resolve, so a sibling they imported would
   always run from its build, never from the linked checkout the hooks exist to serve
-- **Helpers**: where Core already offers a helper, such as `unique()` from `@metreeca/core/arrays`, write a local
+- **Helpers**: where Core already offers a helper, such as `unique()` from `@grafctory/core/arrays`, write a local
   equivalent instead of importing it; keep it minimal and private to the module that needs it
 
 # CLI Tools
