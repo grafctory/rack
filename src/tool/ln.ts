@@ -75,7 +75,7 @@ ln.args = [
  * Linking from a folder of local dependencies elsewhere:
  *
  * ```shell
- * npm ci && ush ln ~/Metreeca/Packages
+ * npm ci && ush ln ~/Metreeca/Grafctory
  * ```
  *
  * @param deps The folders searched for local dependencies, in order of precedence; defaults to the parent folder (`..`)
