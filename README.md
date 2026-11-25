@@ -1,11 +1,16 @@
 # @grafctory/rack
 
-[![npm](https://img.shields.io/npm/v/@grafctory/rack)](https://www.npmjs.com/package/@grafctory/rack)
+[![npm][npm-badge]][npm]
+
+[npm-badge]: https://img.shields.io/npm/v/@grafctory/rack
+[npm]: https://www.npmjs.com/package/@grafctory/rack
+[grafctory]: https://github.com/grafctory
 
 Everyday tooling for npm package development.
 
-**@grafctory/rack** collects build, test and documentation tooling for recurring npm package development needs, so each
-package consumes a single maintained copy instead of carrying its own. Tools are grouped by the toolchain they extend:
+**@grafctory/rack** is the build tooling module of the [Grafctory][grafctory] model-driven knowledge graph framework. It
+collects build, test and documentation tooling for recurring npm package development needs, so each package consumes a
+single maintained copy instead of carrying its own. Tools are grouped by the toolchain they extend:
 
 | Subpath                     | Contents     |
 |-----------------------------|--------------|
@@ -39,3 +44,5 @@ npm install --save-dev @grafctory/rack
 
 This project is licensed under the Apache 2.0 License –
 see [LICENSE](https://github.com/grafctory/rack?tab=Apache-2.0-1-ov-file) file for details.
+
+<sub>Grafctory™ is a trademark of Metreeca srl.</sub>
