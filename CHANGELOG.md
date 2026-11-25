@@ -17,13 +17,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Package renamed to `@grafctory/rack` and repository moved to the `grafctory` GitHub organisation; install
   `@grafctory/rack` and import its subpaths (`/tool`, `/node`, `/vite`) under the new name
 
-## [0.8.1](https://github.com/metreeca/rack/compare/v0.8.0...v0.8.1) - 2026-11-24
+## [0.8.1](https://github.com/grafctory/rack/compare/v0.8.0...v0.8.1) - 2026-11-24
 
 ### Changed
 
 - Maintenance release with no change to the published API or behaviour
 
-## [0.8.0](https://github.com/metreeca/rack/compare/v0.7.0...v0.8.0) - 2026-11-19
+## [0.8.0](https://github.com/grafctory/rack/compare/v0.7.0...v0.8.0) - 2026-11-19
 
 ### Added
 
@@ -56,7 +56,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   their dependencies keep the copies npm settled, and the duplicate check covers only the copies that member loads
 - `ush` messages read `ush:` rather than `index:` when the script runs directly, as through a Windows command shim
 
-## [0.7.0](https://github.com/metreeca/rack/compare/v0.6.1...v0.7.0) - 2026-11-17
+## [0.7.0](https://github.com/grafctory/rack/compare/v0.6.1...v0.7.0) - 2026-11-17
 
 ### Added
 
@@ -84,7 +84,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   dependencies they install, so their files no longer fail with a 403 error; linked checkouts are added to
   `server.fs.allow` next to its configured entries, or next to the workspace root Vite allows when none are configured
 
-## [0.6.1](https://github.com/metreeca/rack/compare/v0.6.0...v0.6.1) - 2026-10-29
+## [0.6.1](https://github.com/grafctory/rack/compare/v0.6.0...v0.6.1) - 2026-10-29
 
 ### Fixed
 
@@ -97,7 +97,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   longer crashes with a null byte path error on modules Vite injects with no file behind them, such as
   `\0vite/preload-helper` in bundles including a dependency with a dynamic import
 
-## [0.6.0](https://github.com/metreeca/rack/compare/v0.5.0...v0.6.0) - 2026-10-23
+## [0.6.0](https://github.com/grafctory/rack/compare/v0.5.0...v0.6.0) - 2026-10-23
 
 ### Added
 
@@ -131,7 +131,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `vitest` development dependency upgraded to 4.1.12, fixing GHSA-qxg6-89mg-rqv8 and GHSA-xp26-3454-mjgp; the
   package is used only to run the test suite and never reaches the published build, so consumers are not affected
 
-## [0.5.0](https://github.com/metreeca/rack/compare/v0.4.0...v0.5.0) - 2026-10-14
+## [0.5.0](https://github.com/grafctory/rack/compare/v0.4.0...v0.5.0) - 2026-10-14
 
 ### Changed
 
@@ -143,7 +143,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `symlinks` plugin sharing the peers of linked packages also with dependencies prebundled by the Vite optimizer, so a
   prebundled library no longer loads a second copy of a peer, such as Preact, next to the one the project resolves
 
-## [0.4.0](https://github.com/metreeca/rack/compare/v0.3.0...v0.4.0) - 2026-10-14
+## [0.4.0](https://github.com/grafctory/rack/compare/v0.3.0...v0.4.0) - 2026-10-14
 
 ### Added
 
@@ -155,7 +155,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `cp`, `ln` and `rm` commands kept executable when a linked Rack checkout is rebuilt, so the npm scripts of linked
   consumers no longer fall through to the system commands with the same name after `npm run build` in the checkout
 
-## [0.3.0](https://github.com/metreeca/rack/compare/v0.2.0...v0.3.0) - 2026-10-14
+## [0.3.0](https://github.com/grafctory/rack/compare/v0.2.0...v0.3.0) - 2026-10-14
 
 ### Added
 
@@ -167,7 +167,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `vite` peer dependency made optional, so projects using only the command line tools no longer have to install Vite;
   a project that does install it still needs Vite 8, which the `symlinks` plugin from `@metreeca/rack/vite` targets
 
-## [0.2.0](https://github.com/metreeca/rack/compare/v0.1.0...v0.2.0) - 2026-10-14
+## [0.2.0](https://github.com/grafctory/rack/compare/v0.1.0...v0.2.0) - 2026-10-14
 
 ### Added
 
@@ -189,7 +189,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `@metreeca/rack` root entry point, which exported nothing: each tool is imported from the subpath of the toolchain
   it extends, such as `@metreeca/rack/vite`, so code importing the bare package name has to switch to that subpath
 
-## [0.1.0](https://github.com/metreeca/rack/releases/tag/v0.1.0) - 2026-10-14
+## [0.1.0](https://github.com/grafctory/rack/releases/tag/v0.1.0) - 2026-10-14
 
 Initial release, establishing the package as the single maintained home for the build, test and documentation
 tooling shared across @metreeca packages, with tools grouped by the toolchain they extend:
