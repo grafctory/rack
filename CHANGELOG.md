@@ -8,7 +8,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 > [!NOTE]
 > Published as `@grafctory/rack` from version 0.8.2; earlier versions were published as `@metreeca/rack`.
 
-## [Unreleased](https://github.com/grafctory/rack/compare/v0.8.2...HEAD)
+## [Unreleased](https://github.com/grafctory/rack/compare/v0.8.3...HEAD)
+
+## [0.8.3](https://github.com/grafctory/rack/compare/v0.8.2...v0.8.3) - 2026-11-26
+
+### Changed
+
+- README introduces the package as part of the Grafctory framework, and bug reports by email go to `info@grafctory.dev`
 
 ## [0.8.2](https://github.com/grafctory/rack/compare/v0.8.1...v0.8.2) - 2026-11-24
 
